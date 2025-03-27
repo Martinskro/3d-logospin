@@ -2,17 +2,18 @@
 
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { useRef, useState, useEffect } from 'react';
-import { Mesh, TextureLoader } from 'three';
+import { Mesh, TextureLoader, Group } from 'three';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 
 interface LogoProps {
   imageUrl: string;
   speed: number;
   scale: number;
+  depth: number;
 }
 
-function Logo({ imageUrl, speed, scale }: LogoProps) {
-  const meshRef = useRef<Mesh>(null);
+function Logo({ imageUrl, speed, scale, depth }: LogoProps) {
+  const groupRef = useRef<Group>(null);
   const [rotationSpeed, setRotationSpeed] = useState(0.01);
   const texture = useLoader(TextureLoader, imageUrl);
 
@@ -23,27 +24,40 @@ function Logo({ imageUrl, speed, scale }: LogoProps) {
 
   // Update scale when it changes
   useEffect(() => {
-    if (meshRef.current) {
-      meshRef.current.scale.set(scale, scale, scale);
+    if (groupRef.current) {
+      groupRef.current.scale.set(scale, scale, scale);
     }
   }, [scale]);
 
   useFrame(() => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += rotationSpeed;
+    if (groupRef.current) {
+      groupRef.current.rotation.y += rotationSpeed;
     }
   });
 
   return (
-    <mesh ref={meshRef}>
-      <planeGeometry args={[2, 2]} />
-      <meshBasicMaterial 
-        map={texture}
-        transparent={true}
-        opacity={1}
-        side={2} // Double-sided rendering
-      />
-    </mesh>
+    <group ref={groupRef}>
+      {/* Front face */}
+      <mesh position={[0, 0, depth / 2]}>
+        <planeGeometry args={[2, 2]} />
+        <meshBasicMaterial 
+          map={texture}
+          transparent={true}
+          opacity={1}
+          side={2}
+        />
+      </mesh>
+      {/* Back face */}
+      <mesh position={[0, 0, -depth / 2]}>
+        <planeGeometry args={[2, 2]} />
+        <meshBasicMaterial 
+          map={texture}
+          transparent={true}
+          opacity={1}
+          side={2}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -54,6 +68,7 @@ interface LogoSceneProps {
   canvasWidth: number;
   canvasHeight: number;
   logoScale: number;
+  depth: number;
 }
 
 export default function LogoScene({
@@ -63,6 +78,7 @@ export default function LogoScene({
   canvasWidth,
   canvasHeight,
   logoScale,
+  depth
 }: LogoSceneProps) {
   return (
     <Canvas 
@@ -88,6 +104,7 @@ export default function LogoScene({
         imageUrl={imageUrl}
         speed={animationSpeed}
         scale={logoScale}
+        depth={depth}
       />
       <OrbitControls 
         enableZoom={false}

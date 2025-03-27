@@ -23,6 +23,7 @@ export default function Editor() {
   const [canvasWidth, setCanvasWidth] = useState<number | ''>(1080);
   const [canvasHeight, setCanvasHeight] = useState<number | ''>(1080);
   const [logoScale, setLogoScale] = useState<number | ''>(100);
+  const [depth, setDepth] = useState<number | ''>(50);
   const [widthError, setWidthError] = useState<string | null>(null);
   const [heightError, setHeightError] = useState<string | null>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -164,6 +165,11 @@ export default function Editor() {
   const handleScaleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLogoScale(value === '' ? '' : parseInt(value));
+  };
+
+  const handleDepthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDepth(value === '' ? '' : parseInt(value));
   };
 
   const handlePresetSelect = (preset: typeof SIZE_PRESETS[0]) => {
@@ -334,6 +340,31 @@ export default function Editor() {
                 </div>
 
                 <div className="control-group">
+                  <h3>Extrusion Depth</h3>
+                  <div className="slider-container">
+                    <input
+                      type="range"
+                      min="0"
+                      max="200"
+                      value={depth}
+                      onChange={(e) => setDepth(parseInt(e.target.value))}
+                      className="slider"
+                    />
+                    <div className="slider-input-wrapper">
+                      <input
+                        type="number"
+                        value={depth}
+                        onChange={handleDepthChange}
+                        className="slider-input"
+                        min="0"
+                        max="200"
+                      />
+                      <span className="slider-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="control-group">
                   <h3>Background Color</h3>
                   <div className="color-picker">
                     <input
@@ -368,6 +399,8 @@ export default function Editor() {
                 canvasWidth={typeof canvasWidth === 'number' ? canvasWidth : 0}
                 canvasHeight={typeof canvasHeight === 'number' ? canvasHeight : 0}
                 logoScale={typeof logoScale === 'number' ? logoScale / 100 : 1}
+                depth={typeof depth === 'number' ? depth / 100 : 0.5}
+                mask={processedImage.mask}
               />
             </div>
           ) : (
