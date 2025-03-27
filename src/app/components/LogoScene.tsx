@@ -1,19 +1,21 @@
 'use client';
 
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { useRef, useState, useEffect } from 'react';
-import { Mesh, Color } from 'three';
+import { Mesh, Color, TextureLoader, Texture } from 'three';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 
 interface LogoProps {
+  imageUrl: string;
   speed: number;
   material: string;
   scale: number;
 }
 
-function Logo({ speed, material, scale }: LogoProps) {
+function Logo({ imageUrl, speed, material, scale }: LogoProps) {
   const meshRef = useRef<Mesh>(null);
   const [rotationSpeed, setRotationSpeed] = useState(0.01);
+  const texture = useLoader(TextureLoader, imageUrl);
 
   // Update rotation speed based on speed prop
   useEffect(() => {
@@ -40,25 +42,25 @@ function Logo({ speed, material, scale }: LogoProps) {
         return {
           metalness: 0.1,
           roughness: 0.1,
-          color: '#0054ff'
+          map: texture
         };
       case 'matte':
         return {
           metalness: 0.1,
           roughness: 0.8,
-          color: '#0054ff'
+          map: texture
         };
       case 'metallic':
         return {
           metalness: 0.9,
           roughness: 0.2,
-          color: '#0054ff'
+          map: texture
         };
       default:
         return {
           metalness: 0.5,
           roughness: 0.2,
-          color: '#0054ff'
+          map: texture
         };
     }
   };
@@ -74,6 +76,7 @@ function Logo({ speed, material, scale }: LogoProps) {
 }
 
 interface LogoSceneProps {
+  imageUrl: string;
   animationSpeed: number;
   material: string;
   backgroundColor: string;
@@ -83,6 +86,7 @@ interface LogoSceneProps {
 }
 
 export default function LogoScene({
+  imageUrl,
   animationSpeed,
   material,
   backgroundColor,
@@ -111,6 +115,7 @@ export default function LogoScene({
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
       <Logo 
+        imageUrl={imageUrl}
         speed={animationSpeed}
         material={material}
         scale={logoScale}
