@@ -4,6 +4,7 @@ export interface ProcessedImage {
   height: number;
   data: ImageData;
   mask: ImageData;
+  isPNG: boolean;
 }
 
 export async function processImage(file: File): Promise<ProcessedImage> {
@@ -52,26 +53,21 @@ export async function processImage(file: File): Promise<ProcessedImage> {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
         // Process the image and create mask
-        const { processedData, maskData } = processImageAndCreateMask(imageData);
+        const { processedData, maskData } = processImageAndCreateMask(imageData, file.type === 'image/png');
 
         // Put processed data back on canvas
         ctx.putImageData(processedData, 0, 0);
 
-        // Determine the correct MIME type
-        let mimeType = file.type;
-        if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
-          mimeType = 'image/jpeg';
-        }
-
         // Convert to data URL with proper MIME type
-        const processedUrl = canvas.toDataURL(mimeType || 'image/png');
+        const processedUrl = canvas.toDataURL('image/png');
 
         resolve({
           url: processedUrl,
           width: canvas.width,
           height: canvas.height,
           data: processedData,
-          mask: maskData
+          mask: maskData,
+          isPNG: file.type === 'image/png'
         });
       };
 
@@ -90,7 +86,7 @@ export async function processImage(file: File): Promise<ProcessedImage> {
   });
 }
 
-function processImageAndCreateMask(imageData: ImageData): { processedData: ImageData; maskData: ImageData } {
+function processImageAndCreateMask(imageData: ImageData, isPNG: boolean): { processedData: ImageData; maskData: ImageData } {
   const { data, width, height } = imageData;
   const processedData = new Uint8ClampedArray(data.length);
   const maskData = new Uint8ClampedArray(data.length);
@@ -118,25 +114,47 @@ function processImageAndCreateMask(imageData: ImageData): { processedData: Image
       );
       const alpha = data[idx + 3];
 
-      // Create mask (1 for logo, 0 for background)
-      if (alpha > 0 && edgeStrength > 30) {
-        maskData[idx] = 255;     // R
-        maskData[idx + 1] = 255; // G
-        maskData[idx + 2] = 255; // B
-        maskData[idx + 3] = 255; // A
+      if (isPNG) {
+        // For PNGs, use the alpha channel directly
+        if (alpha > 0) {
+          // Keep original color data
+          processedData[idx] = data[idx];     // R
+          processedData[idx + 1] = data[idx + 1]; // G
+          processedData[idx + 2] = data[idx + 2]; // B
+          processedData[idx + 3] = 255; // A
+          
+          // Set mask to white
+          maskData[idx] = 255;     // R
+          maskData[idx + 1] = 255; // G
+          maskData[idx + 2] = 255; // B
+          maskData[idx + 3] = 255; // A
+        } else {
+          // Set transparent
+          processedData[idx + 3] = 0; // A
+          maskData[idx + 3] = 0; // A
+        }
       } else {
-        maskData[idx] = 0;     // R
-        maskData[idx + 1] = 0; // G
-        maskData[idx + 2] = 0; // B
-        maskData[idx + 3] = 0; // A
-      }
-
-      // Enhance edges in processed image
-      if (edgeStrength > 30) {
-        processedData[idx] = 0;     // R
-        processedData[idx + 1] = 0; // G
-        processedData[idx + 2] = 0; // B
-        processedData[idx + 3] = 255; // A
+        // For non-PNGs, detect edges and create mask
+        const isEdge = edgeStrength > 30;
+        const isContent = isEdge || (data[idx] > 0 || data[idx + 1] > 0 || data[idx + 2] > 0);
+        
+        if (isContent) {
+          // Keep original color data
+          processedData[idx] = data[idx];     // R
+          processedData[idx + 1] = data[idx + 1]; // G
+          processedData[idx + 2] = data[idx + 2]; // B
+          processedData[idx + 3] = 255; // A
+          
+          // Set mask to white
+          maskData[idx] = 255;     // R
+          maskData[idx + 1] = 255; // G
+          maskData[idx + 2] = 255; // B
+          maskData[idx + 3] = 255; // A
+        } else {
+          // Set transparent
+          processedData[idx + 3] = 0; // A
+          maskData[idx + 3] = 0; // A
+        }
       }
     }
   }

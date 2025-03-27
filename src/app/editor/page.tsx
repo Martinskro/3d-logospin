@@ -19,10 +19,9 @@ export default function Editor() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [animationSpeed, setAnimationSpeed] = useState<number | ''>(50);
-  const [material, setMaterial] = useState('glossy');
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [canvasWidth, setCanvasWidth] = useState<number | ''>(1080);
-  const [canvasHeight, setCanvasHeight] = useState<number | ''>(1920);
+  const [canvasHeight, setCanvasHeight] = useState<number | ''>(1080);
   const [logoScale, setLogoScale] = useState<number | ''>(100);
   const [widthError, setWidthError] = useState<string | null>(null);
   const [heightError, setHeightError] = useState<string | null>(null);
@@ -335,19 +334,6 @@ export default function Editor() {
                 </div>
 
                 <div className="control-group">
-                  <h3>Material</h3>
-                  <select 
-                    value={material} 
-                    onChange={(e) => setMaterial(e.target.value)}
-                    className="material-select"
-                  >
-                    <option value="glossy">Glossy</option>
-                    <option value="matte">Matte</option>
-                    <option value="metallic">Metallic</option>
-                  </select>
-                </div>
-
-                <div className="control-group">
                   <h3>Background Color</h3>
                   <div className="color-picker">
                     <input
@@ -378,7 +364,6 @@ export default function Editor() {
               <LogoScene 
                 imageUrl={processedImage.url}
                 animationSpeed={typeof animationSpeed === 'number' ? animationSpeed : 50}
-                material={material}
                 backgroundColor={backgroundColor}
                 canvasWidth={typeof canvasWidth === 'number' ? canvasWidth : 0}
                 canvasHeight={typeof canvasHeight === 'number' ? canvasHeight : 0}
