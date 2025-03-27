@@ -69,6 +69,8 @@ interface LogoSceneProps {
   canvasHeight: number;
   logoScale: number;
   depth: number;
+  color?: string;
+  mask?: ImageData;
 }
 
 export default function LogoScene({
