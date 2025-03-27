@@ -21,7 +21,7 @@ export default function Editor() {
   const [animationSpeed, setAnimationSpeed] = useState<number | ''>(50);
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [canvasWidth, setCanvasWidth] = useState<number | ''>(1080);
-  const [canvasHeight, setCanvasHeight] = useState<number | ''>(1080);
+  const [canvasHeight, setCanvasHeight] = useState<number | ''>(1920);
   const [logoScale, setLogoScale] = useState<number | ''>(100);
   const [depth, setDepth] = useState<number | ''>(50);
   const [widthError, setWidthError] = useState<string | null>(null);
@@ -29,6 +29,7 @@ export default function Editor() {
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [edgeColor, setEdgeColor] = useState('#000000');
 
   // Update container size on mount and resize
   useEffect(() => {
@@ -365,6 +366,17 @@ export default function Editor() {
                 </div>
 
                 <div className="control-group">
+                  <h3>Edge Color</h3>
+                  <div className="color-picker">
+                    <input
+                      type="color"
+                      value={edgeColor}
+                      onChange={(e) => setEdgeColor(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="control-group">
                   <h3>Background Color</h3>
                   <div className="color-picker">
                     <input
@@ -400,6 +412,7 @@ export default function Editor() {
                 canvasHeight={typeof canvasHeight === 'number' ? canvasHeight : 0}
                 logoScale={typeof logoScale === 'number' ? logoScale / 100 : 1}
                 depth={typeof depth === 'number' ? depth / 100 : 0.5}
+                color={edgeColor}
                 mask={processedImage.mask}
               />
             </div>
