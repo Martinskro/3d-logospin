@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import LogoScene from '../components/LogoScene';
 import { processImage, ProcessedImage } from '../utils/imageProcessor';
 import { useSearchParams, useRouter } from 'next/navigation';
+import html2canvas from 'html2canvas';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 const SIZE_PRESETS = [
   { label: 'Portrait', width: 1080, height: 1920 },
@@ -30,6 +33,8 @@ export default function Editor() {
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [edgeColor, setEdgeColor] = useState('#000000');
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Update container size on mount and resize
   useEffect(() => {
@@ -195,8 +200,80 @@ export default function Editor() {
 
   const displaySize = getDisplaySize();
 
-  const handleDownload = () => {
-    // Implementation of handleDownload function
+  const handleDownload = async () => {
+    if (!canvasRef.current || !processedImage) return;
+    
+    setIsDownloading(true);
+    try {
+      // Create a temporary canvas with the same dimensions
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvasRef.current.width;
+      tempCanvas.height = canvasRef.current.height;
+      const tempCtx = tempCanvas.getContext('2d');
+
+      if (!tempCtx) {
+        throw new Error('Could not get 2D context');
+      }
+
+      // Create a MediaRecorder with WebM format
+      const stream = tempCanvas.captureStream(30); // 30 FPS
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9'
+      });
+
+      const chunks: BlobPart[] = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const webmBlob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(webmBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '3d-logo-animation.webm';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setIsDownloading(false);
+      };
+
+      // Function to draw the current frame
+      const drawFrame = () => {
+        // Clear the temporary canvas with the background color
+        if (backgroundColor === 'transparent') {
+          tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        } else {
+          tempCtx.fillStyle = backgroundColor;
+          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        }
+        
+        // Draw the WebGL canvas
+        tempCtx.drawImage(canvasRef.current!, 0, 0);
+      };
+
+      // Start recording
+      mediaRecorder.start(1000); // Collect data every second
+      
+      // Set up animation frame loop
+      const startTime = Date.now();
+      const animate = () => {
+        drawFrame();
+        if (Date.now() - startTime < 5000) { // Record for 5 seconds
+          requestAnimationFrame(animate);
+        } else {
+          mediaRecorder.stop();
+        }
+      };
+      
+      animate();
+    } catch (error) {
+      console.error('Error recording video:', error);
+      setIsDownloading(false);
+    }
   };
 
   const handleSizePreset = (width: number, height: number) => {
@@ -381,14 +458,32 @@ export default function Editor() {
                   <div className="color-picker">
                     <input
                       type="color"
-                      value={backgroundColor}
-                      onChange={(e) => setBackgroundColor(e.target.value)}
+                      value={backgroundColor === 'transparent' ? '#ffffff' : backgroundColor}
+                      onChange={(e) => {
+                        const newColor = e.target.value;
+                        setBackgroundColor(newColor);
+                      }}
                     />
+                  </div>
+                  <div className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={backgroundColor === 'transparent'}
+                      onChange={(e) => {
+                        const isTransparent = e.target.checked;
+                        setBackgroundColor(isTransparent ? 'transparent' : '#ffffff');
+                      }}
+                    />
+                    <span>Transparent Background</span>
                   </div>
                 </div>
 
-                <button className="download-btn" onClick={handleDownload}>
-                  Download
+                <button 
+                  className="download-btn" 
+                  onClick={handleDownload}
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? 'Recording...' : 'Download'}
                 </button>
               </>
             )}
@@ -414,6 +509,7 @@ export default function Editor() {
                 depth={typeof depth === 'number' ? depth / 100 : 0.5}
                 color={edgeColor}
                 mask={processedImage.mask}
+                onCanvasRef={(ref) => canvasRef.current = ref}
               />
             </div>
           ) : (

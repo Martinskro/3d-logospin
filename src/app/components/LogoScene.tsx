@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { useRef, useState, useEffect } from 'react';
-import { Mesh, TextureLoader, Group } from 'three';
+import { Mesh, TextureLoader, Group, WebGLRenderer } from 'three';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { MiddleShape } from './MiddleShape';
 
@@ -82,6 +82,7 @@ interface LogoSceneProps {
   depth: number;
   color?: string;
   mask?: ImageData;
+  onCanvasRef?: (ref: HTMLCanvasElement | null) => void;
 }
 
 export default function LogoScene({
@@ -93,18 +94,52 @@ export default function LogoScene({
   logoScale,
   depth,
   color,
-  mask
+  mask,
+  onCanvasRef
 }: LogoSceneProps) {
+  const glRef = useRef<WebGLRenderer | null>(null);
+
+  // Update background color when it changes
+  useEffect(() => {
+    if (glRef.current) {
+      if (backgroundColor === 'transparent') {
+        glRef.current.setClearColor(0x000000, 0); // Transparent black
+      } else {
+        glRef.current.setClearColor(backgroundColor);
+      }
+    }
+  }, [backgroundColor]);
+
   return (
     <Canvas 
       camera={{ position: [0, 0, 5], fov: 75 }}
       style={{ 
         width: '100%', 
         height: '100%',
-        background: backgroundColor 
+        backgroundColor: backgroundColor === 'transparent' ? 'transparent' : backgroundColor,
+        backgroundImage: backgroundColor === 'transparent' ? 'linear-gradient(45deg, #e0e0e0 25%, transparent 25%), linear-gradient(-45deg, #e0e0e0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e0e0e0 75%), linear-gradient(-45deg, transparent 75%, #e0e0e0 75%)' : 'none',
+        backgroundSize: backgroundColor === 'transparent' ? '20px 20px' : 'auto',
+        backgroundPosition: backgroundColor === 'transparent' ? '0 0, 0 10px, 10px -10px, -10px 0px' : '0 0'
       }}
-      gl={{ preserveDrawingBuffer: true }}
+      gl={{ 
+        preserveDrawingBuffer: true, 
+        alpha: true,
+        antialias: true,
+        powerPreference: 'high-performance'
+      }}
       dpr={[1, 2]}
+      onCreated={({ gl }) => {
+        if (onCanvasRef) {
+          onCanvasRef(gl.domElement);
+        }
+        glRef.current = gl;
+        // Set initial clear color
+        if (backgroundColor === 'transparent') {
+          gl.setClearColor(0x000000, 0); // Transparent black
+        } else {
+          gl.setClearColor(backgroundColor);
+        }
+      }}
     >
       <PerspectiveCamera 
         makeDefault 
