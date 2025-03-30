@@ -22,8 +22,50 @@ export default function Home() {
   }, []);
 
   const handleFileSelect = async (file: File) => {
-    setSelectedFile(file);
-    router.push('/editor');
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    // Validate image dimensions
+    const img = new (window.Image as any)();
+    const objectUrl = URL.createObjectURL(file);
+    
+    try {
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = objectUrl;
+      });
+
+      if (img.width > 4096 || img.height > 4096) {
+        alert('Image dimensions must be less than 4096x4096 pixels');
+        return;
+      }
+
+      setSelectedFile(file);
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64Data = e.target?.result as string;
+        // Store in localStorage instead of URL
+        localStorage.setItem('uploadedImage', base64Data);
+        router.push('/editor');
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      alert('Failed to process image. Please try another file.');
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
   };
 
   const handleStickyButtonClick = () => {
@@ -33,7 +75,7 @@ export default function Home() {
   return (
     <main>
       <div className="navbar">
-        <h2 className="navbar-text">3D ANIMATOR</h2>
+        <h2 className="navbar-text" onClick={() => router.push('/')} style={{ cursor: 'pointer' }}>3D ANIMATOR</h2>
         <div className="navbar-buttons">
           <button className="nav-btn">Log In</button>
         </div>
@@ -56,7 +98,14 @@ export default function Home() {
             <p className="additional-text">or drop a file, paste an image or URL.</p>
           </div>
         </div>
-        <Image src="/3dlogo.webp" alt="Animated logo" width={400} height={400} className="animated-webp" />
+        <Image 
+          src="/3dlogo.webp" 
+          alt="Animated logo" 
+          width={400} 
+          height={400} 
+          priority 
+          className="animated-webp" 
+        />
       </section>    
 
       <section className="section section2">
@@ -65,7 +114,13 @@ export default function Home() {
           <div className="box-container">
             <div className="box">
               <div className="box-content">
-                <Image src="/upload.png" alt="Upload step" width={40} height={40} className="box-image" />
+                <Image 
+                  src="/upload.png" 
+                  alt="Upload step" 
+                  width={40} 
+                  height={40} 
+                  className="box-image" 
+                />
                 <div className="text-wrapper">
                   <h3 className="box-header">1. Upload.</h3>
                   <p className="box-description">Choose your prefered image from your photo library that is less than 2GB in size.</p>
@@ -74,7 +129,13 @@ export default function Home() {
             </div>
             <div className="box">
               <div className="box-content">
-                <Image src="/animate.png" alt="Animate step" width={40} height={40} className="box-image" />
+                <Image 
+                  src="/animate.png" 
+                  alt="Animate step" 
+                  width={40} 
+                  height={40} 
+                  className="box-image" 
+                />
                 <div className="text-wrapper">
                   <h3 className="box-header">2. Animation.</h3>
                   <p className="box-description">Our program will cut out your logo and process it, then make it 3D and animate it!</p>
@@ -83,7 +144,13 @@ export default function Home() {
             </div>
             <div className="box">
               <div className="box-content">
-                <Image src="/edit.png" alt="Edit step" width={40} height={40} className="box-image" />
+                <Image 
+                  src="/edit.png" 
+                  alt="Edit step" 
+                  width={40} 
+                  height={40} 
+                  className="box-image" 
+                />
                 <div className="text-wrapper">
                   <h3 className="box-header">3. Continue editing.</h3>
                   <p className="box-description">Your animation is done, but you can change properties like edge material and finish, speed, etc.</p>

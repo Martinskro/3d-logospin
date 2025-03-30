@@ -3,29 +3,33 @@
 import { useState, useEffect, useRef } from 'react';
 import LogoScene from '../components/LogoScene';
 import { processImage, ProcessedImage } from '../utils/imageProcessor';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const SIZE_PRESETS = [
+  { label: 'Portrait', width: 1080, height: 1920 },
+  { label: 'Square', width: 1080, height: 1080 },
   { label: 'HD', width: 1920, height: 1080 },
   { label: '2K', width: 2048, height: 1080 },
-  { label: 'Square', width: 1080, height: 1080 },
-  { label: 'Portrait', width: 1080, height: 1920 },
 ];
 
 export default function Editor() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [processedImage, setProcessedImage] = useState<ProcessedImage | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [animationSpeed, setAnimationSpeed] = useState<number | ''>(50);
-  const [material, setMaterial] = useState('glossy');
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
-  const [canvasWidth, setCanvasWidth] = useState<number | ''>(600);
-  const [canvasHeight, setCanvasHeight] = useState<number | ''>(400);
+  const [canvasWidth, setCanvasWidth] = useState<number | ''>(1080);
+  const [canvasHeight, setCanvasHeight] = useState<number | ''>(1920);
   const [logoScale, setLogoScale] = useState<number | ''>(100);
+  const [depth, setDepth] = useState<number | ''>(50);
   const [widthError, setWidthError] = useState<string | null>(null);
   const [heightError, setHeightError] = useState<string | null>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [edgeColor, setEdgeColor] = useState('#000000');
 
   // Update container size on mount and resize
   useEffect(() => {
@@ -44,24 +48,40 @@ export default function Editor() {
     return () => window.removeEventListener('resize', updateContainerSize);
   }, []);
 
+  const handleFileUpload = async (file: File) => {
+    setIsProcessing(true);
+    setError(null);
+    try {
+      const processed = await processImage(file);
+      setProcessedImage(processed);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to process image');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle image from localStorage on mount
+  useEffect(() => {
+    const imageData = localStorage.getItem('uploadedImage');
+    if (imageData) {
+      // Convert base64 to File object
+      fetch(imageData)
+        .then(res => res.blob())
+        .then(blob => {
+          // Get the file type from the blob
+          const fileType = blob.type;
+          const file = new File([blob], 'image.' + fileType.split('/')[1], { type: fileType });
+          handleFileUpload(file);
+        })
+        .catch(err => {
+          setError('Failed to load image');
+        });
+    }
+  }, []);
+
   // Handle file upload and processing
   useEffect(() => {
-    const handleFileUpload = async (file: File) => {
-      setIsProcessing(true);
-      setError(null);
-      try {
-        const processed = await processImage(file);
-        setProcessedImage(processed);
-        // Set initial canvas size based on processed image
-        setCanvasWidth(processed.width);
-        setCanvasHeight(processed.height);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to process image');
-      } finally {
-        setIsProcessing(false);
-      }
-    };
-
     // Listen for file upload events
     const handleFileSelect = (e: Event) => {
       const input = e.target as HTMLInputElement;
@@ -148,6 +168,11 @@ export default function Editor() {
     setLogoScale(value === '' ? '' : parseInt(value));
   };
 
+  const handleDepthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDepth(value === '' ? '' : parseInt(value));
+  };
+
   const handlePresetSelect = (preset: typeof SIZE_PRESETS[0]) => {
     setCanvasWidth(preset.width);
     setCanvasHeight(preset.height);
@@ -182,7 +207,7 @@ export default function Editor() {
   return (
     <main className="min-h-screen bg-white">
       <div className="navbar">
-        <h2 className="navbar-text">3D ANIMATOR</h2>
+        <h2 className="navbar-text" onClick={() => router.push('/')} style={{ cursor: 'pointer' }}>3D ANIMATOR</h2>
         <div className="navbar-buttons">
           <button className="nav-btn">Log In</button>
         </div>
@@ -295,8 +320,8 @@ export default function Editor() {
                   <div className="slider-container">
                     <input
                       type="range"
-                      min="1"
-                      max="100"
+                      min="0"
+                      max="200"
                       value={logoScale}
                       onChange={(e) => setLogoScale(parseInt(e.target.value))}
                       className="slider"
@@ -307,8 +332,8 @@ export default function Editor() {
                         value={logoScale}
                         onChange={handleScaleChange}
                         className="slider-input"
-                        min="1"
-                        max="100"
+                        min="0"
+                        max="200"
                       />
                       <span className="slider-unit">%</span>
                     </div>
@@ -316,16 +341,39 @@ export default function Editor() {
                 </div>
 
                 <div className="control-group">
-                  <h3>Material</h3>
-                  <select 
-                    value={material} 
-                    onChange={(e) => setMaterial(e.target.value)}
-                    className="material-select"
-                  >
-                    <option value="glossy">Glossy</option>
-                    <option value="matte">Matte</option>
-                    <option value="metallic">Metallic</option>
-                  </select>
+                  <h3>Extrusion Depth</h3>
+                  <div className="slider-container">
+                    <input
+                      type="range"
+                      min="0"
+                      max="200"
+                      value={depth}
+                      onChange={(e) => setDepth(parseInt(e.target.value))}
+                      className="slider"
+                    />
+                    <div className="slider-input-wrapper">
+                      <input
+                        type="number"
+                        value={depth}
+                        onChange={handleDepthChange}
+                        className="slider-input"
+                        min="0"
+                        max="200"
+                      />
+                      <span className="slider-unit">%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="control-group">
+                  <h3>Edge Color</h3>
+                  <div className="color-picker">
+                    <input
+                      type="color"
+                      value={edgeColor}
+                      onChange={(e) => setEdgeColor(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="control-group">
@@ -359,11 +407,13 @@ export default function Editor() {
               <LogoScene 
                 imageUrl={processedImage.url}
                 animationSpeed={typeof animationSpeed === 'number' ? animationSpeed : 50}
-                material={material}
                 backgroundColor={backgroundColor}
                 canvasWidth={typeof canvasWidth === 'number' ? canvasWidth : 0}
                 canvasHeight={typeof canvasHeight === 'number' ? canvasHeight : 0}
                 logoScale={typeof logoScale === 'number' ? logoScale / 100 : 1}
+                depth={typeof depth === 'number' ? depth / 100 : 0.5}
+                color={edgeColor}
+                mask={processedImage.mask}
               />
             </div>
           ) : (

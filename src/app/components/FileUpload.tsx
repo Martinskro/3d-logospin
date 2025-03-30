@@ -33,6 +33,16 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
       e.preventDefault();
       dragCounter.current = 0;
       setIsDragging(false);
+      
+      const dataTransfer = e.dataTransfer;
+      if (dataTransfer && dataTransfer.files && dataTransfer.files.length > 0) {
+        const file = dataTransfer.files[0];
+        if (file.type.startsWith('image/')) {
+          onFileSelect(file);
+        } else {
+          alert('Please drop an image file');
+        }
+      }
     };
 
     window.addEventListener('dragenter', handleWindowDragEnter);
@@ -56,7 +66,12 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
 
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      onFileSelect(files[0]);
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        onFileSelect(file);
+      } else {
+        alert('Please drop an image file');
+      }
     }
   };
 

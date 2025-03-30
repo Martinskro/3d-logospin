@@ -1,98 +1,103 @@
 'use client';
 
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { useRef, useState, useEffect } from 'react';
-import { Mesh, Color } from 'three';
+import { Mesh, TextureLoader, Group } from 'three';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { MiddleShape } from './MiddleShape';
 
 interface LogoProps {
+  imageUrl: string;
   speed: number;
-  material: string;
   scale: number;
+  depth: number;
+  color?: string;
+  mask?: ImageData;
 }
 
-function Logo({ speed, material, scale }: LogoProps) {
-  const meshRef = useRef<Mesh>(null);
+function Logo({ imageUrl, speed, scale, depth, color, mask }: LogoProps) {
+  const groupRef = useRef<Group>(null);
   const [rotationSpeed, setRotationSpeed] = useState(0.01);
+  const texture = useLoader(TextureLoader, imageUrl);
 
   // Update rotation speed based on speed prop
   useEffect(() => {
-    setRotationSpeed(speed / 2500); // Convert slider value (0-100) to reasonable rotation speed
+    setRotationSpeed(speed / 2500);
   }, [speed]);
 
   // Update scale when it changes
   useEffect(() => {
-    if (meshRef.current) {
-      meshRef.current.scale.set(scale, scale, scale);
+    if (groupRef.current) {
+      groupRef.current.scale.set(scale, scale, scale);
     }
   }, [scale]);
 
   useFrame(() => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += rotationSpeed;
+    if (groupRef.current) {
+      groupRef.current.rotation.y += rotationSpeed;
     }
   });
 
-  // Define material properties based on material type
-  const getMaterialProps = () => {
-    switch (material) {
-      case 'glossy':
-        return {
-          metalness: 0.1,
-          roughness: 0.1,
-          color: '#0054ff'
-        };
-      case 'matte':
-        return {
-          metalness: 0.1,
-          roughness: 0.8,
-          color: '#0054ff'
-        };
-      case 'metallic':
-        return {
-          metalness: 0.9,
-          roughness: 0.2,
-          color: '#0054ff'
-        };
-      default:
-        return {
-          metalness: 0.5,
-          roughness: 0.2,
-          color: '#0054ff'
-        };
-    }
-  };
-
-  const materialProps = getMaterialProps();
-
   return (
-    <mesh ref={meshRef}>
-      <boxGeometry args={[2, 2, 0.2]} />
-      <meshStandardMaterial {...materialProps} />
-    </mesh>
+    <group ref={groupRef} position={[0, 0, 0]}>
+      {/* Front face */}
+      <mesh position={[0, 0, depth / 2 + 0.01]}>
+        <planeGeometry args={[2, 2]} />
+        <meshBasicMaterial 
+          map={texture}
+          transparent={true}
+          opacity={1}
+          side={0}
+          alphaTest={0.5}
+          depthWrite={false}
+          depthTest={false}
+        />
+      </mesh>
+      {/* Back face */}
+      <mesh position={[0, 0, -depth / 2 - 0.01]}>
+        <planeGeometry args={[2, 2]} />
+        <meshBasicMaterial 
+          map={texture}
+          transparent={true}
+          opacity={1}
+          side={1}
+          alphaTest={0.5}
+          depthWrite={false}
+          depthTest={false}
+        />
+      </mesh>
+      {/* Middle connection */}
+      <MiddleShape mask={mask} color={color} depth={depth} />
+    </group>
   );
 }
 
 interface LogoSceneProps {
+  imageUrl: string;
   animationSpeed: number;
-  material: string;
   backgroundColor: string;
   canvasWidth: number;
   canvasHeight: number;
   logoScale: number;
+  depth: number;
+  color?: string;
+  mask?: ImageData;
 }
 
 export default function LogoScene({
+  imageUrl,
   animationSpeed,
-  material,
   backgroundColor,
   canvasWidth,
   canvasHeight,
-  logoScale
+  logoScale,
+  depth,
+  color,
+  mask
 }: LogoSceneProps) {
   return (
     <Canvas 
-      camera={{ position: [0, 0, 5], fov: 50 }}
+      camera={{ position: [0, 0, 5], fov: 75 }}
       style={{ 
         width: '100%', 
         height: '100%',
@@ -104,16 +109,19 @@ export default function LogoScene({
       <PerspectiveCamera 
         makeDefault 
         position={[0, 0, 5]}
-        fov={50}
+        fov={75}
         near={0.1}
         far={1000}
       />
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
       <Logo 
+        imageUrl={imageUrl}
         speed={animationSpeed}
-        material={material}
         scale={logoScale}
+        depth={depth}
+        color={color}
+        mask={mask}
       />
       <OrbitControls 
         enableZoom={false}

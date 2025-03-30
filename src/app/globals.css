@@ -93,6 +93,7 @@ body, html {
     max-width: 400px;
     height: auto;
     margin-right: 8%;
+    aspect-ratio: 1/1;
 }
 
 .text-container {
@@ -237,10 +238,12 @@ body, html {
 }
 
 .box-image {
-    width: 40px;
-    height: auto;
+    width: 40px !important;
+    height: 40px !important;
     border-radius: 5px;
     margin-right: 10px;
+    object-fit: contain;
+    aspect-ratio: 1/1;
 }
 
 .text-wrapper {
@@ -309,10 +312,12 @@ body, html {
 .section3 .section-image {
     flex: 0 1 50%;
     max-width: 500px;
-    width: 100%;
-    height: auto;
+    width: 100% !important;
+    height: auto !important;
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    object-fit: contain;
+    aspect-ratio: 5/4;
 }
 
 /* Section 4 styles */
@@ -359,10 +364,12 @@ body, html {
 .section4 .section-image {
     flex: 0 1 50%;
     max-width: 500px;
-    width: 100%;
-    height: auto;
+    width: 100% !important;
+    height: auto !important;
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    object-fit: contain;
+    aspect-ratio: 5/4;
 }
 
 /* Sticky button styles */
@@ -789,4 +796,51 @@ body, html {
 .section {
     width: 100%;
     overflow-x: hidden;
+}
+
+.processing-message {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-size: 14px;
+}
+
+.upload-prompt {
+    text-align: center;
+    padding: 40px 20px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.upload-prompt p {
+    margin: 10px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.file-input {
+    width: 100%;
+    padding: 10px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.file-input:hover {
+    border-color: #0054ff;
+}
+
+.upload-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+    font-size: 16px;
+    background-color: #f5f5f5;
+    border-radius: 12px;
+    border: 2px dashed #ddd;
 }
