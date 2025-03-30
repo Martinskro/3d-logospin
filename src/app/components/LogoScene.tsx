@@ -41,31 +41,33 @@ function Logo({ imageUrl, speed, scale, depth, color, mask }: LogoProps) {
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
       {/* Front face */}
-      <mesh position={[0, 0, depth / 2 + 0.001]}>
+      <mesh position={[0, 0, depth / 2 + 0.01]}>
         <planeGeometry args={[2, 2]} />
         <meshBasicMaterial 
           map={texture}
           transparent={true}
           opacity={1}
-          side={2}
+          side={0}
           alphaTest={0.5}
           depthWrite={false}
+          depthTest={false}
         />
       </mesh>
       {/* Back face */}
-      <mesh position={[0, 0, -depth / 2 - 0.001]}>
+      <mesh position={[0, 0, -depth / 2 - 0.01]}>
         <planeGeometry args={[2, 2]} />
         <meshBasicMaterial 
           map={texture}
           transparent={true}
           opacity={1}
-          side={2}
+          side={1}
           alphaTest={0.5}
           depthWrite={false}
+          depthTest={false}
         />
       </mesh>
       {/* Middle connection */}
-      <MiddleShape mask={mask} color={color} />
+      <MiddleShape mask={mask} color={color} depth={depth} />
     </group>
   );
 }
