@@ -82,7 +82,8 @@ interface LogoSceneProps {
   depth: number;
   color?: string;
   mask?: ImageData;
-  onCanvasRef?: (ref: HTMLCanvasElement | null) => void;
+  onCanvasRef?: (canvas: HTMLCanvasElement) => void;
+  isDownloading?: boolean;
 }
 
 export default function LogoScene({
@@ -95,9 +96,11 @@ export default function LogoScene({
   depth,
   color,
   mask,
-  onCanvasRef
+  onCanvasRef,
+  isDownloading = false
 }: LogoSceneProps) {
   const glRef = useRef<WebGLRenderer | null>(null);
+  const groupRef = useRef<Group>(null);
 
   // Update background color when it changes
   useEffect(() => {
@@ -109,6 +112,13 @@ export default function LogoScene({
       }
     }
   }, [backgroundColor]);
+
+  // Reset rotation when starting a new recording
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = 0;
+    }
+  }, [isDownloading]);
 
   return (
     <Canvas 
@@ -141,31 +151,20 @@ export default function LogoScene({
         }
       }}
     >
-      <PerspectiveCamera 
-        makeDefault 
-        position={[0, 0, 5]}
-        fov={75}
-        near={0.1}
-        far={1000}
-      />
+      <PerspectiveCamera makeDefault position={[0, 0, 5]} />
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
-      <Logo 
-        imageUrl={imageUrl}
-        speed={animationSpeed}
-        scale={logoScale}
-        depth={depth}
-        color={color}
-        mask={mask}
-      />
-      <OrbitControls 
-        enableZoom={false}
-        enablePan={false}
-        enableRotate={true}
-        rotateSpeed={animationSpeed / 100}
-        minPolarAngle={Math.PI / 2}
-        maxPolarAngle={Math.PI / 2}
-      />
+      <primitive object={new Group()} ref={groupRef}>
+        <Logo 
+          imageUrl={imageUrl}
+          speed={animationSpeed}
+          scale={logoScale}
+          depth={depth}
+          color={color}
+          mask={mask}
+        />
+      </primitive>
+      <OrbitControls enableZoom={false} enablePan={false} />
     </Canvas>
   );
 } 
