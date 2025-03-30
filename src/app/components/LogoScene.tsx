@@ -101,9 +101,12 @@ export default function LogoScene({
       style={{ 
         width: '100%', 
         height: '100%',
-        background: backgroundColor 
+        background: backgroundColor === 'transparent' ? 'transparent' : backgroundColor,
+        backgroundImage: backgroundColor === 'transparent' ? 'linear-gradient(45deg, #e0e0e0 25%, transparent 25%), linear-gradient(-45deg, #e0e0e0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e0e0e0 75%), linear-gradient(-45deg, transparent 75%, #e0e0e0 75%)' : 'none',
+        backgroundSize: backgroundColor === 'transparent' ? '20px 20px' : 'auto',
+        backgroundPosition: backgroundColor === 'transparent' ? '0 0, 0 10px, 10px -10px, -10px 0px' : '0 0'
       }}
-      gl={{ preserveDrawingBuffer: true }}
+      gl={{ preserveDrawingBuffer: true, alpha: true }}
       dpr={[1, 2]}
     >
       <PerspectiveCamera 

@@ -381,9 +381,18 @@ export default function Editor() {
                   <div className="color-picker">
                     <input
                       type="color"
-                      value={backgroundColor}
+                      value={backgroundColor === 'transparent' ? '#ffffff' : backgroundColor}
                       onChange={(e) => setBackgroundColor(e.target.value)}
+                      disabled={backgroundColor === 'transparent'}
                     />
+                  </div>
+                  <div className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={backgroundColor === 'transparent'}
+                      onChange={(e) => setBackgroundColor(e.target.checked ? 'transparent' : '#ffffff')}
+                    />
+                    <span>Transparent Background</span>
                   </div>
                 </div>
 
