@@ -9,9 +9,10 @@ self.onmessage = (e: MessageEvent) => {
 
   // Configuration parameters
   const ALPHA_THRESHOLD = 128;
-  const ANGLE_THRESHOLD = 0.1;
-  const DISTANCE_THRESHOLD = 5;
+  const ANGLE_THRESHOLD = 0.05; // Reduced to capture more subtle angles
+  const DISTANCE_THRESHOLD = 2; // Reduced to capture more detail
   const MIN_SHAPE_SIZE = 10;
+  const MAX_NEIGHBOR_DISTANCE = 2; // Maximum distance to consider for next outline point
 
   function isPixelSolid(x: number, y: number): boolean {
     if (x < 0 || x >= width || y < 0 || y >= height) return false;
@@ -22,9 +23,14 @@ self.onmessage = (e: MessageEvent) => {
   function isOutlinePixel(x: number, y: number): boolean {
     if (!isPixelSolid(x, y)) return false;
     
-    // Check if any neighboring pixel is transparent
-    return !isPixelSolid(x - 1, y) || !isPixelSolid(x + 1, y) ||
-           !isPixelSolid(x, y - 1) || !isPixelSolid(x, y + 1);
+    // Check in 8 directions for better outline detection
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        if (!isPixelSolid(x + dx, y + dy)) return true;
+      }
+    }
+    return false;
   }
 
   function floodFill(startX: number, startY: number, shapeId: number, shapes: Map<string, number>): number {
@@ -41,31 +47,61 @@ self.onmessage = (e: MessageEvent) => {
       shapes.set(key, shapeId);
       size++;
       
-      // Add neighbors to queue
-      if (x > 0) queue.push([x - 1, y]);
-      if (x < width - 1) queue.push([x + 1, y]);
-      if (y > 0) queue.push([x, y - 1]);
-      if (y < height - 1) queue.push([x, y + 1]);
+      // Add neighbors to queue (8-directional)
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            queue.push([nx, ny]);
+          }
+        }
+      }
     }
     
     return size;
   }
 
-  function findNearestUnvisited(point: { x: number; y: number }, outlinePoints: Set<string>): { x: number; y: number } | null {
-    let minDist = Infinity;
-    let nearest = null;
+  function findNextOutlinePoint(current: { x: number; y: number }, outlinePoints: Set<string>): { x: number; y: number } | null {
+    const candidates: { point: { x: number; y: number }, dist: number }[] = [];
     
+    // Look for candidates within MAX_NEIGHBOR_DISTANCE
     for (const key of outlinePoints) {
       const [x, y] = key.split(',').map(Number);
-      const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+      const dx = x - current.x;
+      const dy = y - current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
       
-      if (dist < minDist) {
-        minDist = dist;
-        nearest = { x, y };
+      if (dist <= MAX_NEIGHBOR_DISTANCE) {
+        candidates.push({ point: { x, y }, dist });
       }
     }
     
-    return nearest;
+    if (candidates.length === 0) {
+      // If no close neighbors, fall back to nearest point
+      let minDist = Infinity;
+      let nearest = null;
+      
+      for (const key of outlinePoints) {
+        const [x, y] = key.split(',').map(Number);
+        const dist = Math.sqrt(
+          Math.pow(x - current.x, 2) + 
+          Math.pow(y - current.y, 2)
+        );
+        
+        if (dist < minDist) {
+          minDist = dist;
+          nearest = { x, y };
+        }
+      }
+      
+      return nearest;
+    }
+    
+    // Among close candidates, prefer the one that maintains the current direction
+    candidates.sort((a, b) => a.dist - b.dist);
+    return candidates[0].point;
   }
 
   function normalizePoints(points: { x: number; y: number }[]): { x: number; y: number }[] {
@@ -80,6 +116,7 @@ self.onmessage = (e: MessageEvent) => {
     
     const result: { x: number; y: number }[] = [points[0]];
     let lastPoint = points[0];
+    let lastAngle = 0;
     
     for (let i = 1; i < points.length - 1; i++) {
       const current = points[i];
@@ -94,9 +131,11 @@ self.onmessage = (e: MessageEvent) => {
         Math.pow(current.y - lastPoint.y, 2)
       );
       
-      if (angleDiff > ANGLE_THRESHOLD || distance > DISTANCE_THRESHOLD) {
+      // Keep point if it represents a significant change in direction or distance
+      if (angleDiff > ANGLE_THRESHOLD || Math.abs(angle1 - lastAngle) > ANGLE_THRESHOLD || distance > DISTANCE_THRESHOLD) {
         result.push(current);
         lastPoint = current;
+        lastAngle = angle1;
       }
     }
     
@@ -156,12 +195,17 @@ self.onmessage = (e: MessageEvent) => {
         path.push(currentPoint);
         outlinePoints.delete(key);
 
-        const next = findNearestUnvisited(currentPoint, outlinePoints);
+        const next = findNextOutlinePoint(currentPoint, outlinePoints);
         if (!next) break;
         currentPoint = next;
       }
 
       if (path.length >= 3) {
+        // Close the shape by adding the first point again
+        if (path.length > 0) {
+          path.push(path[0]);
+        }
+        
         const simplified = simplifyPoints(path);
         const normalized = normalizePoints(simplified);
         shapes.push(normalized);
