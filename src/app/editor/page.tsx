@@ -35,6 +35,9 @@ export default function Editor() {
   const [edgeColor, setEdgeColor] = useState('#000000');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadDuration, setDownloadDuration] = useState(5); // Duration in seconds
+  const [downloadLoops, setDownloadLoops] = useState(1); // Number of loops
+  const [downloadMode, setDownloadMode] = useState<'duration' | 'loops'>('duration');
 
   // Update container size on mount and resize
   useEffect(() => {
@@ -255,6 +258,17 @@ export default function Editor() {
         tempCtx.drawImage(canvasRef.current!, 0, 0);
       };
 
+      // Calculate recording duration based on mode
+      let recordingDuration = 5000; // Default 5 seconds
+      if (downloadMode === 'duration') {
+        recordingDuration = downloadDuration * 1000; // Convert seconds to milliseconds
+      } else {
+        // Calculate duration based on number of loops and current rotation speed
+        const rotationSpeed = Number(animationSpeed);
+        const timePerLoop = 360 / rotationSpeed; // Time in seconds for one complete rotation
+        recordingDuration = timePerLoop * downloadLoops * 1000; // Convert to milliseconds
+      }
+
       // Start recording
       mediaRecorder.start(1000); // Collect data every second
       
@@ -262,7 +276,7 @@ export default function Editor() {
       const startTime = Date.now();
       const animate = () => {
         drawFrame();
-        if (Date.now() - startTime < 5000) { // Record for 5 seconds
+        if (Date.now() - startTime < recordingDuration) {
           requestAnimationFrame(animate);
         } else {
           mediaRecorder.stop();
@@ -478,13 +492,59 @@ export default function Editor() {
                   </div>
                 </div>
 
-                <button 
-                  className="download-btn" 
-                  onClick={handleDownload}
-                  disabled={isDownloading}
-                >
-                  {isDownloading ? 'Recording...' : 'Download'}
-                </button>
+                <div className="control-group">
+                  <h3>Download Settings</h3>
+                  <div className="download-controls">
+                    <div className="download-mode-selector">
+                      <label>
+                        <input
+                          type="radio"
+                          checked={downloadMode === 'duration'}
+                          onChange={() => setDownloadMode('duration')}
+                        />
+                        Duration (seconds)
+                      </label>
+                      <label>
+                        <input
+                          type="radio"
+                          checked={downloadMode === 'loops'}
+                          onChange={() => setDownloadMode('loops')}
+                        />
+                        Number of Loops
+                      </label>
+                    </div>
+                    {downloadMode === 'duration' ? (
+                      <div className="duration-control">
+                        <label>Duration (seconds):</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={downloadDuration}
+                          onChange={(e) => setDownloadDuration(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))}
+                        />
+                      </div>
+                    ) : (
+                      <div className="loops-control">
+                        <label>Number of Loops:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={downloadLoops}
+                          onChange={(e) => setDownloadLoops(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <button 
+                    className="download-button" 
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? 'Recording...' : 'Download Video'}
+                  </button>
+                </div>
               </>
             )}
           </div>

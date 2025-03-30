@@ -98,14 +98,16 @@ export default function Home() {
             <p className="additional-text">or drop a file, paste an image or URL.</p>
           </div>
         </div>
-        <Image 
-          src="/3dlogo.webp" 
-          alt="Animated logo" 
-          width={400} 
-          height={400} 
-          priority 
-          className="animated-webp" 
-        />
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="animated-webp"
+          style={{ width: '50%', maxWidth: '400px', height: 'auto', marginRight: '8%', aspectRatio: '1/1' }}
+        >
+          <source src="/3d-logo-animation.webm" type="video/webm" />
+        </video>
       </section>    
 
       <section className="section section2">
