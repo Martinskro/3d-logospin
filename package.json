@@ -6,12 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "download-ffmpeg": "node scripts/download-ffmpeg.js"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.7",
+    "@ffmpeg/util": "^0.12.1",
     "@react-three/drei": "^10.0.5",
     "@react-three/fiber": "^9.1.0",
+    "html2canvas": "^1.4.1",
     "next": "15.2.4",
+    "process": "^0.11.10",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.174.0"
