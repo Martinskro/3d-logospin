@@ -1,7 +1,6 @@
 // Web Worker for shape creation
 self.onmessage = (e: MessageEvent) => {
   const { mask } = e.data;
-  console.log('Received mask:', { width: mask.width, height: mask.height });
   
   const width = mask.width;
   const height = mask.height;
@@ -9,10 +8,13 @@ self.onmessage = (e: MessageEvent) => {
 
   // Configuration parameters
   const ALPHA_THRESHOLD = 128;
-  const ANGLE_THRESHOLD = 0.05; // Reduced to capture more subtle angles
-  const DISTANCE_THRESHOLD = 2; // Reduced to capture more detail
-  const MIN_SHAPE_SIZE = 10;
-  const MAX_NEIGHBOR_DISTANCE = 2; // Maximum distance to consider for next outline point
+  const ANGLE_THRESHOLD = 0.05;
+  const DISTANCE_THRESHOLD = 2;
+  const MIN_SHAPE_SIZE = 5;
+  const MAX_NEIGHBOR_DISTANCE = 3;
+  const SMOOTHING_FACTOR = 0.3;
+  const MAX_TURN_ANGLE = Math.PI * 0.9; // Allow sharper turns (162 degrees)
+  const MIN_DISTANCE = 1; // Minimum distance between points
 
   function isPixelSolid(x: number, y: number): boolean {
     if (x < 0 || x >= width || y < 0 || y >= height) return false;
@@ -24,13 +26,19 @@ self.onmessage = (e: MessageEvent) => {
     if (!isPixelSolid(x, y)) return false;
     
     // Check in 8 directions for better outline detection
+    let transparentNeighbors = 0;
+    
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         if (dx === 0 && dy === 0) continue;
-        if (!isPixelSolid(x + dx, y + dy)) return true;
+        if (!isPixelSolid(x + dx, y + dy)) {
+          transparentNeighbors++;
+        }
       }
     }
-    return false;
+    
+    // Require at least 2 transparent neighbors
+    return transparentNeighbors >= 2;
   }
 
   function floodFill(startX: number, startY: number, shapeId: number, shapes: Map<string, number>): number {
@@ -63,8 +71,8 @@ self.onmessage = (e: MessageEvent) => {
     return size;
   }
 
-  function findNextOutlinePoint(current: { x: number; y: number }, outlinePoints: Set<string>): { x: number; y: number } | null {
-    const candidates: { point: { x: number; y: number }, dist: number }[] = [];
+  function findNextOutlinePoint(current: { x: number; y: number }, outlinePoints: Set<string>, lastDirection?: { dx: number; dy: number }): { x: number; y: number } | null {
+    const candidates: { point: { x: number; y: number }, dist: number, angle: number }[] = [];
     
     // Look for candidates within MAX_NEIGHBOR_DISTANCE
     for (const key of outlinePoints) {
@@ -73,22 +81,50 @@ self.onmessage = (e: MessageEvent) => {
       const dy = y - current.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       
+      // Skip points that are too close
+      if (dist < MIN_DISTANCE) continue;
+      
       if (dist <= MAX_NEIGHBOR_DISTANCE) {
-        candidates.push({ point: { x, y }, dist });
+        let angle = 0;
+        if (lastDirection) {
+          const dot = dx * lastDirection.dx + dy * lastDirection.dy;
+          const mag1 = Math.sqrt(dx * dx + dy * dy);
+          const mag2 = Math.sqrt(lastDirection.dx * lastDirection.dx + lastDirection.dy * lastDirection.dy);
+          angle = Math.acos(dot / (mag1 * mag2));
+          
+          // Only skip points that would create extremely sharp turns
+          if (angle > MAX_TURN_ANGLE) continue;
+        }
+        candidates.push({ point: { x, y }, dist, angle });
       }
     }
     
     if (candidates.length === 0) {
-      // If no close neighbors, fall back to nearest point
+      // If no close neighbors, fall back to nearest point but with more lenient angle check
       let minDist = Infinity;
       let nearest = null;
       
       for (const key of outlinePoints) {
         const [x, y] = key.split(',').map(Number);
-        const dist = Math.sqrt(
-          Math.pow(x - current.x, 2) + 
-          Math.pow(y - current.y, 2)
-        );
+        const dx = x - current.x;
+        const dy = y - current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Skip points that are too close
+        if (dist < MIN_DISTANCE) continue;
+        
+        // Only consider points within a reasonable distance
+        if (dist > MAX_NEIGHBOR_DISTANCE * 2) continue;
+        
+        if (lastDirection) {
+          const dot = dx * lastDirection.dx + dy * lastDirection.dy;
+          const mag1 = Math.sqrt(dx * dx + dy * dy);
+          const mag2 = Math.sqrt(lastDirection.dx * lastDirection.dx + lastDirection.dy * lastDirection.dy);
+          const angle = Math.acos(dot / (mag1 * mag2));
+          
+          // Only skip points that would create extremely sharp turns
+          if (angle > MAX_TURN_ANGLE) continue;
+        }
         
         if (dist < minDist) {
           minDist = dist;
@@ -100,7 +136,16 @@ self.onmessage = (e: MessageEvent) => {
     }
     
     // Among close candidates, prefer the one that maintains the current direction
-    candidates.sort((a, b) => a.dist - b.dist);
+    // and is closest to the current point
+    candidates.sort((a, b) => {
+      // First prioritize points that maintain direction
+      if (Math.abs(a.angle - b.angle) > 0.5) {
+        return a.angle - b.angle;
+      }
+      // Then prefer closer points
+      return a.dist - b.dist;
+    });
+    
     return candidates[0].point;
   }
 
@@ -109,6 +154,23 @@ self.onmessage = (e: MessageEvent) => {
       x: (p.x / width) * 2 - 1,
       y: -(p.y / height) * 2 + 1
     }));
+  }
+
+  function smoothPoints(points: { x: number; y: number }[]): { x: number; y: number }[] {
+    if (points.length <= 3) return points;
+    
+    const smoothed: { x: number; y: number }[] = [];
+    for (let i = 0; i < points.length; i++) {
+      const prev = points[(i - 1 + points.length) % points.length];
+      const curr = points[i];
+      const next = points[(i + 1) % points.length];
+      
+      smoothed.push({
+        x: curr.x + SMOOTHING_FACTOR * ((prev.x + next.x) / 2 - curr.x),
+        y: curr.y + SMOOTHING_FACTOR * ((prev.y + next.y) / 2 - curr.y)
+      });
+    }
+    return smoothed;
   }
 
   function simplifyPoints(points: { x: number; y: number }[]): { x: number; y: number }[] {
@@ -132,7 +194,9 @@ self.onmessage = (e: MessageEvent) => {
       );
       
       // Keep point if it represents a significant change in direction or distance
-      if (angleDiff > ANGLE_THRESHOLD || Math.abs(angle1 - lastAngle) > ANGLE_THRESHOLD || distance > DISTANCE_THRESHOLD) {
+      if (angleDiff > ANGLE_THRESHOLD || 
+          Math.abs(angle1 - lastAngle) > ANGLE_THRESHOLD || 
+          distance > DISTANCE_THRESHOLD) {
         result.push(current);
         lastPoint = current;
         lastAngle = angle1;
@@ -190,13 +254,19 @@ self.onmessage = (e: MessageEvent) => {
         })
         .reduce((a, b) => a.x < b.x ? a : b); // Start with leftmost point
 
+      let lastDirection = { dx: 0, dy: 0 };
       while (outlinePoints.size > 0) {
         const key = `${currentPoint.x},${currentPoint.y}`;
         path.push(currentPoint);
         outlinePoints.delete(key);
 
-        const next = findNextOutlinePoint(currentPoint, outlinePoints);
+        const next = findNextOutlinePoint(currentPoint, outlinePoints, lastDirection);
         if (!next) break;
+        
+        lastDirection = {
+          dx: next.x - currentPoint.x,
+          dy: next.y - currentPoint.y
+        };
         currentPoint = next;
       }
 
@@ -206,7 +276,9 @@ self.onmessage = (e: MessageEvent) => {
           path.push(path[0]);
         }
         
-        const simplified = simplifyPoints(path);
+        // Apply smoothing and simplification
+        const smoothed = smoothPoints(path);
+        const simplified = simplifyPoints(smoothed);
         const normalized = normalizePoints(simplified);
         shapes.push(normalized);
       }
@@ -216,8 +288,5 @@ self.onmessage = (e: MessageEvent) => {
   }
 
   const shapes = findShapes();
-  console.log('Found shapes:', shapes.length);
-  console.log('Points per shape:', shapes.map(shape => shape.length));
-
   self.postMessage({ shapes });
 }; 
