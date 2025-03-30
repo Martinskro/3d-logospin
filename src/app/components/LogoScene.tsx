@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { useRef, useState, useEffect } from 'react';
-import { Mesh, TextureLoader, Group, WebGLRenderer } from 'three';
+import { Mesh, TextureLoader, Group, WebGLRenderer, Scene, PerspectiveCamera as ThreePerspectiveCamera } from 'three';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { MiddleShape } from './MiddleShape';
 
@@ -101,6 +101,8 @@ export default function LogoScene({
 }: LogoSceneProps) {
   const glRef = useRef<WebGLRenderer | null>(null);
   const groupRef = useRef<Group>(null);
+  const sceneRef = useRef<Scene | null>(null);
+  const cameraRef = useRef<ThreePerspectiveCamera | null>(null);
 
   // Update background color when it changes
   useEffect(() => {
@@ -115,8 +117,10 @@ export default function LogoScene({
 
   // Reset rotation when starting a new recording
   useEffect(() => {
-    if (groupRef.current) {
+    if (groupRef.current && glRef.current && sceneRef.current && cameraRef.current) {
       groupRef.current.rotation.y = 0;
+      // Force a re-render to ensure the rotation is applied
+      glRef.current.render(sceneRef.current, cameraRef.current);
     }
   }, [isDownloading]);
 
@@ -138,11 +142,13 @@ export default function LogoScene({
         powerPreference: 'high-performance'
       }}
       dpr={[1, 2]}
-      onCreated={({ gl }) => {
+      onCreated={({ gl, scene, camera }) => {
         if (onCanvasRef) {
           onCanvasRef(gl.domElement);
         }
         glRef.current = gl;
+        sceneRef.current = scene;
+        cameraRef.current = camera as ThreePerspectiveCamera;
         // Set initial clear color
         if (backgroundColor === 'transparent') {
           gl.setClearColor(0x000000, 0); // Transparent black
