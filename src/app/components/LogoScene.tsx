@@ -4,15 +4,18 @@ import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { useRef, useState, useEffect } from 'react';
 import { Mesh, TextureLoader, Group } from 'three';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { MiddleShape } from './MiddleShape';
 
 interface LogoProps {
   imageUrl: string;
   speed: number;
   scale: number;
   depth: number;
+  color?: string;
+  mask?: ImageData;
 }
 
-function Logo({ imageUrl, speed, scale, depth }: LogoProps) {
+function Logo({ imageUrl, speed, scale, depth, color, mask }: LogoProps) {
   const groupRef = useRef<Group>(null);
   const [rotationSpeed, setRotationSpeed] = useState(0.01);
   const texture = useLoader(TextureLoader, imageUrl);
@@ -36,27 +39,33 @@ function Logo({ imageUrl, speed, scale, depth }: LogoProps) {
   });
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} position={[0, 0, 0]}>
       {/* Front face */}
-      <mesh position={[0, 0, depth / 2]}>
+      <mesh position={[0, 0, depth / 2 + 0.001]}>
         <planeGeometry args={[2, 2]} />
         <meshBasicMaterial 
           map={texture}
           transparent={true}
           opacity={1}
           side={2}
+          alphaTest={0.5}
+          depthWrite={false}
         />
       </mesh>
       {/* Back face */}
-      <mesh position={[0, 0, -depth / 2]}>
+      <mesh position={[0, 0, -depth / 2 - 0.001]}>
         <planeGeometry args={[2, 2]} />
         <meshBasicMaterial 
           map={texture}
           transparent={true}
           opacity={1}
           side={2}
+          alphaTest={0.5}
+          depthWrite={false}
         />
       </mesh>
+      {/* Middle connection */}
+      <MiddleShape mask={mask} color={color} />
     </group>
   );
 }
@@ -80,7 +89,9 @@ export default function LogoScene({
   canvasWidth,
   canvasHeight,
   logoScale,
-  depth
+  depth,
+  color,
+  mask
 }: LogoSceneProps) {
   return (
     <Canvas 
@@ -107,6 +118,8 @@ export default function LogoScene({
         speed={animationSpeed}
         scale={logoScale}
         depth={depth}
+        color={color}
+        mask={mask}
       />
       <OrbitControls 
         enableZoom={false}
