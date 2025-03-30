@@ -383,10 +383,9 @@ export default function Editor() {
                       type="color"
                       value={backgroundColor === 'transparent' ? '#ffffff' : backgroundColor}
                       onChange={(e) => setBackgroundColor(e.target.value)}
-                      disabled={backgroundColor === 'transparent'}
                     />
                   </div>
-                  <div className="checkbox-label">
+                  <div className="checkbox-label" onClick={() => setBackgroundColor(backgroundColor === 'transparent' ? '#ffffff' : 'transparent')}>
                     <input
                       type="checkbox"
                       checked={backgroundColor === 'transparent'}
