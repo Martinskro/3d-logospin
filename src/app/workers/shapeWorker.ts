@@ -151,8 +151,8 @@ self.onmessage = (e: MessageEvent) => {
 
   function normalizePoints(points: { x: number; y: number }[]): { x: number; y: number }[] {
     return points.map(p => ({
-      x: (p.x / width) * 2 - 1,
-      y: -(p.y / height) * 2 + 1
+      x: p.x / width,
+      y: 1 - (p.y / height) // Flip y-coordinate
     }));
   }
 

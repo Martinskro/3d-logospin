@@ -67,10 +67,10 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
-      if (file.type.startsWith('image/')) {
+      if (file.type === 'image/png') {
         onFileSelect(file);
       } else {
-        alert('Please drop an image file');
+        alert('Only PNG files are supported. Please select a PNG file.');
       }
     }
   };
@@ -115,7 +115,7 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
           height={90} 
           className="overlay-corner bottom-right" 
         />
-        <div className="overlay-text">Drop image anywhere</div>
+        <div className="overlay-text">Drop PNG file anywhere</div>
       </div>
       <div
         onDragOver={(e) => e.preventDefault()}
@@ -126,7 +126,7 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
         type="file"
         ref={fileInputRef}
         onChange={handleFileInput}
-        accept="image/*"
+        accept="image/png"
         style={{ display: 'none' }}
       />
     </>

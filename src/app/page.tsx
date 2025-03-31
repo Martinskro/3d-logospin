@@ -22,9 +22,9 @@ export default function Home() {
   }, []);
 
   const handleFileSelect = async (file: File) => {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+    // Validate file type - only accept PNG
+    if (file.type !== 'image/png') {
+      alert('Only PNG files are supported. Please select a PNG file.');
       return;
     }
 
@@ -83,12 +83,12 @@ export default function Home() {
       
       <section className="section section1">
         <div className="text-container">
-          <h1>Free online photo to 3D-Animation</h1>
-          <p>The free online photo to animation tool from MelonMedia lets you upload your photo image and convert it to a spinning 3D-animation in seconds.</p>
+          <h1>Free online PNG to 3D-Animation</h1>
+          <p>The free online PNG to animation tool from MelonMedia lets you upload your PNG image and convert it to a spinning 3D-animation in seconds.</p>
           
           <div className="big-container">
             <div className="button-textbox-container">
-              <label htmlFor="sectionFileInput" className="btn">Upload your photo</label>
+              <label htmlFor="sectionFileInput" className="btn">Upload your PNG</label>
               <input type="file" id="sectionFileInput" style={{ display: 'none' }} onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])} />
               <div className="textbox">
                 <p>Free to use</p>
@@ -209,13 +209,13 @@ export default function Home() {
         className={`sticky-button ${showStickyButton ? 'show' : ''}`} 
         onClick={handleStickyButtonClick}
       >
-        Upload photo
+        Upload PNG
       </button>
       <input
         type="file"
         ref={stickyFileInputRef}
         onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
-        accept="image/*"
+        accept="image/png"
         style={{ display: 'none' }}
       />
     </main>
