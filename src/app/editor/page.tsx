@@ -22,10 +22,11 @@ export default function Editor() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [animationSpeed, setAnimationSpeed] = useState<number | ''>(50);
+  const [spinDirection, setSpinDirection] = useState<'clockwise' | 'counterclockwise'>('clockwise');
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [canvasWidth, setCanvasWidth] = useState<number | ''>(1080);
   const [canvasHeight, setCanvasHeight] = useState<number | ''>(1920);
-  const [logoScale, setLogoScale] = useState<number | ''>(100);
+  const [logoScale, setLogoScale] = useState<number | ''>(50);
   const [depth, setDepth] = useState<number | ''>(50);
   const [widthError, setWidthError] = useState<string | null>(null);
   const [heightError, setHeightError] = useState<string | null>(null);
@@ -220,7 +221,7 @@ export default function Editor() {
       }
 
       // Create a MediaRecorder with WebM format
-      const stream = tempCanvas.captureStream(30); // 30 FPS
+      const stream = tempCanvas.captureStream(60); // 30 FPS
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp9'
       });
@@ -385,6 +386,18 @@ export default function Editor() {
                 </div>
 
                 <div className="control-group">
+                  <h3>Spin Direction</h3>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={spinDirection === 'counterclockwise'}
+                      onChange={(e) => setSpinDirection(e.target.checked ? 'counterclockwise' : 'clockwise')}
+                    />
+                    <span>Reverse Direction</span>
+                  </label>
+                </div>
+
+                <div className="control-group">
                   <h3>Animation Speed</h3>
                   <div className="slider-container">
                     <input
@@ -414,8 +427,8 @@ export default function Editor() {
                   <div className="slider-container">
                     <input
                       type="range"
-                      min="0"
-                      max="200"
+                      min="1"
+                      max="100"
                       value={logoScale}
                       onChange={(e) => setLogoScale(parseInt(e.target.value))}
                       className="slider"
@@ -426,8 +439,8 @@ export default function Editor() {
                         value={logoScale}
                         onChange={handleScaleChange}
                         className="slider-input"
-                        min="0"
-                        max="200"
+                        min="1"
+                        max="100"
                       />
                       <span className="slider-unit">%</span>
                     </div>
@@ -440,7 +453,7 @@ export default function Editor() {
                     <input
                       type="range"
                       min="0"
-                      max="200"
+                      max="100"
                       value={depth}
                       onChange={(e) => setDepth(parseInt(e.target.value))}
                       className="slider"
@@ -452,7 +465,7 @@ export default function Editor() {
                         onChange={handleDepthChange}
                         className="slider-input"
                         min="0"
-                        max="200"
+                        max="100"
                       />
                       <span className="slider-unit">%</span>
                     </div>
@@ -482,7 +495,7 @@ export default function Editor() {
                       }}
                     />
                   </div>
-                  <div className="checkbox-label">
+                  <label className="checkbox-label">
                     <input
                       type="checkbox"
                       checked={backgroundColor === 'transparent'}
@@ -492,7 +505,7 @@ export default function Editor() {
                       }}
                     />
                     <span>Transparent Background</span>
-                  </div>
+                  </label>
                 </div>
 
                 <div className="control-group">
@@ -523,12 +536,13 @@ export default function Editor() {
                 backgroundColor={backgroundColor}
                 canvasWidth={typeof canvasWidth === 'number' ? canvasWidth : 0}
                 canvasHeight={typeof canvasHeight === 'number' ? canvasHeight : 0}
-                logoScale={typeof logoScale === 'number' ? logoScale / 100 : 1}
+                logoScale={typeof logoScale === 'number' ? (logoScale * 2) / 100 : 1}
                 depth={typeof depth === 'number' ? depth / 100 : 0.5}
                 color={edgeColor}
                 mask={processedImage.mask}
-                onCanvasRef={(ref) => canvasRef.current = ref}
+                onCanvasRef={(canvas) => canvasRef.current = canvas}
                 isDownloading={isDownloading}
+                spinDirection={spinDirection}
               />
             </div>
           ) : (
