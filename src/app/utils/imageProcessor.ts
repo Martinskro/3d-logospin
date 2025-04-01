@@ -9,9 +9,9 @@ export interface ProcessedImage {
 
 export async function processImage(file: File): Promise<ProcessedImage> {
   return new Promise((resolve, reject) => {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      reject(new Error('Invalid file type. Please select an image file.'));
+    // Validate file type - only accept PNG
+    if (file.type !== 'image/png') {
+      reject(new Error('Only PNG files are supported. Please select a PNG file.'));
       return;
     }
 
@@ -53,7 +53,7 @@ export async function processImage(file: File): Promise<ProcessedImage> {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
         // Process the image and create mask
-        const { processedData, maskData } = processImageAndCreateMask(imageData, file.type === 'image/png');
+        const { processedData, maskData } = processImageAndCreateMask(imageData, true); // Always true since we only accept PNGs
 
         // Put processed data back on canvas
         ctx.putImageData(processedData, 0, 0);
@@ -67,7 +67,7 @@ export async function processImage(file: File): Promise<ProcessedImage> {
           height: canvas.height,
           data: processedData,
           mask: maskData,
-          isPNG: file.type === 'image/png'
+          isPNG: true // Always true since we only accept PNGs
         });
       };
 
@@ -97,63 +97,75 @@ function processImageAndCreateMask(imageData: ImageData, isPNG: boolean): { proc
     maskData[i] = data[i];
   }
 
-  // Process the image and create mask
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
-      const idx = (y * width + x) * 4;
-      
-      // Get neighboring pixels
-      const left = (y * width + (x - 1)) * 4;
-      const right = (y * width + (x + 1)) * 4;
-      const top = ((y - 1) * width + x) * 4;
-      const bottom = ((y + 1) * width + x) * 4;
-
-      // Calculate edge strength and alpha
-      const edgeStrength = calculateEdgeStrength(
-        data, processedData, idx, left, right, top, bottom
-      );
-      const alpha = data[idx + 3];
-
-      if (isPNG) {
-        // For PNGs, use the alpha channel directly
-        if (alpha > 0) {
-          // Keep original color data
-          processedData[idx] = data[idx];     // R
-          processedData[idx + 1] = data[idx + 1]; // G
-          processedData[idx + 2] = data[idx + 2]; // B
-          processedData[idx + 3] = 255; // A
-          
-          // Set mask to white
-          maskData[idx] = 255;     // R
-          maskData[idx + 1] = 255; // G
-          maskData[idx + 2] = 255; // B
-          maskData[idx + 3] = 255; // A
-        } else {
-          // Set transparent
-          processedData[idx + 3] = 0; // A
-          maskData[idx + 3] = 0; // A
-        }
+  if (isPNG) {
+    // For PNGs, use the alpha channel directly
+    for (let i = 0; i < data.length; i += 4) {
+      const alpha = data[i + 3];
+      if (alpha > 0) {
+        processedData[i + 3] = 255;
+        // Set mask to white for visible pixels
+        maskData[i] = 255;
+        maskData[i + 1] = 255;
+        maskData[i + 2] = 255;
+        maskData[i + 3] = 255;
       } else {
-        // For non-PNGs, detect edges and create mask
-        const isEdge = edgeStrength > 30;
-        const isContent = isEdge || (data[idx] > 0 || data[idx + 1] > 0 || data[idx + 2] > 0);
+        processedData[i + 3] = 0;
+        // Set mask to transparent for transparent pixels
+        maskData[i] = 0;
+        maskData[i + 1] = 0;
+        maskData[i + 2] = 0;
+        maskData[i + 3] = 0;
+      }
+    }
+  } else {
+    // For non-PNGs, use advanced background removal
+    const backgroundColor = findDominantBackgroundColor(data, width, height);
+    const threshold = calculateColorThreshold(backgroundColor);
+
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = (y * width + x) * 4;
         
-        if (isContent) {
+        // Get neighboring pixels
+        const left = (y * width + (x - 1)) * 4;
+        const right = (y * width + (x + 1)) * 4;
+        const top = ((y - 1) * width + x) * 4;
+        const bottom = ((y + 1) * width + x) * 4;
+
+        // Calculate edge strength
+        const edgeStrength = calculateEdgeStrength(
+          data, processedData, idx, left, right, top, bottom
+        );
+
+        // Check if pixel is similar to background color
+        const isBackground = isSimilarToBackground(
+          data[idx], data[idx + 1], data[idx + 2],
+          backgroundColor, threshold
+        );
+
+        // Determine if pixel should be kept
+        const shouldKeep = !isBackground || edgeStrength > 30;
+
+        if (shouldKeep) {
           // Keep original color data
-          processedData[idx] = data[idx];     // R
-          processedData[idx + 1] = data[idx + 1]; // G
-          processedData[idx + 2] = data[idx + 2]; // B
-          processedData[idx + 3] = 255; // A
+          processedData[idx] = data[idx];
+          processedData[idx + 1] = data[idx + 1];
+          processedData[idx + 2] = data[idx + 2];
+          processedData[idx + 3] = 255;
           
-          // Set mask to white
-          maskData[idx] = 255;     // R
-          maskData[idx + 1] = 255; // G
-          maskData[idx + 2] = 255; // B
-          maskData[idx + 3] = 255; // A
+          // Set mask to white for kept pixels
+          maskData[idx] = 255;
+          maskData[idx + 1] = 255;
+          maskData[idx + 2] = 255;
+          maskData[idx + 3] = 255;
         } else {
           // Set transparent
-          processedData[idx + 3] = 0; // A
-          maskData[idx + 3] = 0; // A
+          processedData[idx + 3] = 0;
+          // Set mask to transparent for removed pixels
+          maskData[idx] = 0;
+          maskData[idx + 1] = 0;
+          maskData[idx + 2] = 0;
+          maskData[idx + 3] = 0;
         }
       }
     }
@@ -163,6 +175,110 @@ function processImageAndCreateMask(imageData: ImageData, isPNG: boolean): { proc
     processedData: new ImageData(processedData, width, height),
     maskData: new ImageData(maskData, width, height)
   };
+}
+
+function findDominantBackgroundColor(data: Uint8ClampedArray, width: number, height: number): [number, number, number] {
+  // Sample pixels from the edges of the image
+  const samples: [number, number, number][] = [];
+  const sampleSize = Math.min(width, height) / 10; // Sample every 10th pixel
+
+  // Sample from edges
+  for (let i = 0; i < width; i += sampleSize) {
+    // Top edge
+    const topIdx = i * 4;
+    samples.push([data[topIdx], data[topIdx + 1], data[topIdx + 2]]);
+    
+    // Bottom edge
+    const bottomIdx = ((height - 1) * width + i) * 4;
+    samples.push([data[bottomIdx], data[bottomIdx + 1], data[bottomIdx + 2]]);
+  }
+
+  for (let i = 0; i < height; i += sampleSize) {
+    // Left edge
+    const leftIdx = (i * width) * 4;
+    samples.push([data[leftIdx], data[leftIdx + 1], data[leftIdx + 2]]);
+    
+    // Right edge
+    const rightIdx = (i * width + (width - 1)) * 4;
+    samples.push([data[rightIdx], data[rightIdx + 1], data[rightIdx + 2]]);
+  }
+
+  // Find the most common color using k-means clustering
+  const k = 3; // Number of clusters
+  const clusters = kMeansClustering(samples, k);
+  
+  // Return the color of the largest cluster
+  return clusters.reduce((a, b) => a.length > b.length ? a : b)[0];
+}
+
+function kMeansClustering(points: [number, number, number][], k: number): [number, number, number][][] {
+  // Initialize centroids randomly
+  const centroids = points
+    .sort(() => Math.random() - 0.5)
+    .slice(0, k);
+  
+  let clusters: [number, number, number][][] = Array(k).fill([]).map(() => []);
+  let oldCentroids: [number, number, number][] = [];
+  
+  while (true) {
+    // Assign points to nearest centroid
+    clusters = Array(k).fill([]).map(() => []);
+    points.forEach(point => {
+      const distances = centroids.map(centroid => 
+        distance(point, centroid)
+      );
+      const nearestCentroidIndex = distances.indexOf(Math.min(...distances));
+      clusters[nearestCentroidIndex].push(point);
+    });
+    
+    // Update centroids
+    oldCentroids = [...centroids];
+    clusters.forEach((cluster, i) => {
+      if (cluster.length > 0) {
+        centroids[i] = cluster.reduce((sum, point) => [
+          sum[0] + point[0],
+          sum[1] + point[1],
+          sum[2] + point[2]
+        ], [0, 0, 0]).map(val => val / cluster.length) as [number, number, number];
+      }
+    });
+    
+    // Check convergence
+    if (centroids.every((centroid, i) => 
+      distance(centroid, oldCentroids[i]) < 1
+    )) {
+      break;
+    }
+  }
+  
+  return clusters;
+}
+
+function distance(a: [number, number, number], b: [number, number, number]): number {
+  return Math.sqrt(
+    Math.pow(a[0] - b[0], 2) +
+    Math.pow(a[1] - b[1], 2) +
+    Math.pow(a[2] - b[2], 2)
+  );
+}
+
+function calculateColorThreshold(backgroundColor: [number, number, number]): number {
+  // Calculate a threshold based on the background color's intensity
+  const intensity = (backgroundColor[0] + backgroundColor[1] + backgroundColor[2]) / 3;
+  return intensity > 128 ? 30 : 50; // Higher threshold for dark backgrounds
+}
+
+function isSimilarToBackground(
+  r: number, g: number, b: number,
+  backgroundColor: [number, number, number],
+  threshold: number
+): boolean {
+  const distance = Math.sqrt(
+    Math.pow(r - backgroundColor[0], 2) +
+    Math.pow(g - backgroundColor[1], 2) +
+    Math.pow(b - backgroundColor[2], 2)
+  );
+  return distance < threshold;
 }
 
 function calculateEdgeStrength(

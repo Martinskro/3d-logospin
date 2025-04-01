@@ -19,6 +19,30 @@ function Logo({ imageUrl, speed, scale, depth, color, mask }: LogoProps) {
   const groupRef = useRef<Group>(null);
   const [rotationSpeed, setRotationSpeed] = useState(0.01);
   const texture = useLoader(TextureLoader, imageUrl);
+  const [dimensions, setDimensions] = useState({ width: 2, height: 2 });
+
+  // Calculate dimensions based on image aspect ratio
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      const aspectRatio = img.width / img.height;
+      let width = 2;
+      let height = 2;
+      
+      if (aspectRatio > 1) {
+        // Image is wider than tall
+        width = 2;
+        height = 2 / aspectRatio;
+      } else {
+        // Image is taller than wide
+        width = 2 * aspectRatio;
+        height = 2;
+      }
+      
+      setDimensions({ width, height });
+    };
+    img.src = imageUrl;
+  }, [imageUrl]);
 
   // Update rotation speed based on speed prop
   useEffect(() => {
@@ -42,7 +66,7 @@ function Logo({ imageUrl, speed, scale, depth, color, mask }: LogoProps) {
     <group ref={groupRef} position={[0, 0, 0]}>
       {/* Front face */}
       <mesh position={[0, 0, depth / 2 + 0.01]}>
-        <planeGeometry args={[2, 2]} />
+        <planeGeometry args={[dimensions.width, dimensions.height]} />
         <meshBasicMaterial 
           map={texture}
           transparent={true}
@@ -55,7 +79,7 @@ function Logo({ imageUrl, speed, scale, depth, color, mask }: LogoProps) {
       </mesh>
       {/* Back face */}
       <mesh position={[0, 0, -depth / 2 - 0.01]}>
-        <planeGeometry args={[2, 2]} />
+        <planeGeometry args={[dimensions.width, dimensions.height]} />
         <meshBasicMaterial 
           map={texture}
           transparent={true}
@@ -67,7 +91,13 @@ function Logo({ imageUrl, speed, scale, depth, color, mask }: LogoProps) {
         />
       </mesh>
       {/* Middle connection */}
-      <MiddleShape mask={mask} color={color} depth={depth} />
+      <MiddleShape 
+        mask={mask} 
+        color={color} 
+        depth={depth} 
+        width={dimensions.width} 
+        height={dimensions.height}
+      />
     </group>
   );
 }

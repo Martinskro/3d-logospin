@@ -6,9 +6,11 @@ interface MiddleShapeProps {
   mask?: ImageData;
   color?: string;
   depth?: number;
+  width?: number;
+  height?: number;
 }
 
-export function MiddleShape({ mask, color = '#ffffff', depth = 0.5 }: MiddleShapeProps) {
+export function MiddleShape({ mask, color = '#ffffff', depth = 0.5, width = 2, height = 2 }: MiddleShapeProps) {
   const [shapes, setShapes] = useState<Shape[]>([]);
 
   useEffect(() => {
@@ -29,15 +31,20 @@ export function MiddleShape({ mask, color = '#ffffff', depth = 0.5 }: MiddleShap
                 maxY: Math.max(acc.maxY, p.y)
               }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
 
-              const width = bounds.maxX - bounds.minX;
-              const height = bounds.maxY - bounds.minY;
+              const shapeWidth = bounds.maxX - bounds.minX;
+              const shapeHeight = bounds.maxY - bounds.minY;
               
               // Filter out shapes that are too small (less than 1% of the image size)
-              return width > 0.02 && height > 0.02;
+              return shapeWidth > 0.02 && shapeHeight > 0.02;
             })
             .map(points => {
               const shape = new Shape();
-              shape.setFromPoints(points.map(p => new Vector2(p.x, p.y)));
+              // Scale points to match the dimensions and center them
+              const scaledPoints = points.map(p => new Vector2(
+                (p.x * 2 - 1) * (width / 2),
+                (p.y * 2 - 1) * (height / 2)
+              ));
+              shape.setFromPoints(scaledPoints);
               shape.closePath();
               return shape;
             });
@@ -50,7 +57,7 @@ export function MiddleShape({ mask, color = '#ffffff', depth = 0.5 }: MiddleShap
     } else {
       setShapes([]);
     }
-  }, [mask]);
+  }, [mask, width, height]);
 
   const extrudeSettings = useMemo(() => ({
     depth: depth,
@@ -80,7 +87,7 @@ export function MiddleShape({ mask, color = '#ffffff', depth = 0.5 }: MiddleShap
         ))
       ) : (
         <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[2, 2, depth]} />
+          <boxGeometry args={[width, height, depth]} />
           <meshPhongMaterial 
             color={color}
             transparent={false}
