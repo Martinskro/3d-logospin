@@ -13,9 +13,10 @@ interface LogoProps {
   depth: number;
   color?: string;
   mask?: ImageData;
+  spinDirection: 'clockwise' | 'counterclockwise';
 }
 
-function Logo({ imageUrl, speed, scale, depth, color, mask }: LogoProps) {
+function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection }: LogoProps) {
   const groupRef = useRef<Group>(null);
   const [rotationSpeed, setRotationSpeed] = useState(0.01);
   const texture = useLoader(TextureLoader, imageUrl);
@@ -58,7 +59,7 @@ function Logo({ imageUrl, speed, scale, depth, color, mask }: LogoProps) {
 
   useFrame(() => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += rotationSpeed;
+      groupRef.current.rotation.y += spinDirection === 'clockwise' ? rotationSpeed : -rotationSpeed;
     }
   });
 
@@ -114,6 +115,7 @@ interface LogoSceneProps {
   mask?: ImageData;
   onCanvasRef?: (canvas: HTMLCanvasElement) => void;
   isDownloading?: boolean;
+  spinDirection: 'clockwise' | 'counterclockwise';
 }
 
 export default function LogoScene({
@@ -127,7 +129,8 @@ export default function LogoScene({
   color,
   mask,
   onCanvasRef,
-  isDownloading = false
+  isDownloading = false,
+  spinDirection
 }: LogoSceneProps) {
   const glRef = useRef<WebGLRenderer | null>(null);
   const groupRef = useRef<Group>(null);
@@ -198,6 +201,7 @@ export default function LogoScene({
           depth={depth}
           color={color}
           mask={mask}
+          spinDirection={spinDirection}
         />
       </primitive>
       <OrbitControls enableZoom={false} enablePan={false} />

@@ -683,11 +683,16 @@ body, html {
     font-size: 14px;
     color: #000;
     cursor: pointer;
+    user-select: none;
 }
 
 .checkbox-label input[type="checkbox"] {
     width: 16px;
     height: 16px;
+    cursor: pointer;
+}
+
+.checkbox-label span {
     cursor: pointer;
 }
 
