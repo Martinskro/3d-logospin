@@ -14,9 +14,10 @@ interface LogoProps {
   color?: string;
   mask?: ImageData;
   spinDirection: 'clockwise' | 'counterclockwise';
+  isDownloading?: boolean;
 }
 
-function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection }: LogoProps) {
+function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection, isDownloading }: LogoProps) {
   const groupRef = useRef<Group>(null);
   const [rotationSpeed, setRotationSpeed] = useState(0.01);
   const texture = useLoader(TextureLoader, imageUrl);
@@ -56,6 +57,16 @@ function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection }: Log
       groupRef.current.scale.set(scale, scale, scale);
     }
   }, [scale]);
+
+  // Reset rotation when starting download
+  useEffect(() => {
+    if (isDownloading && groupRef.current) {
+      // Reset rotation to 0 when starting download
+      groupRef.current.rotation.y = 0;
+      // Start rotation from 0
+      setRotationSpeed(speed / 2500);
+    }
+  }, [isDownloading, speed]);
 
   useFrame(() => {
     if (groupRef.current) {
@@ -148,15 +159,6 @@ export default function LogoScene({
     }
   }, [backgroundColor]);
 
-  // Reset rotation when starting a new recording
-  useEffect(() => {
-    if (groupRef.current && glRef.current && sceneRef.current && cameraRef.current) {
-      groupRef.current.rotation.y = 0;
-      // Force a re-render to ensure the rotation is applied
-      glRef.current.render(sceneRef.current, cameraRef.current);
-    }
-  }, [isDownloading]);
-
   return (
     <Canvas 
       camera={{ position: [0, 0, 5], fov: 75 }}
@@ -202,6 +204,7 @@ export default function LogoScene({
           color={color}
           mask={mask}
           spinDirection={spinDirection}
+          isDownloading={isDownloading}
         />
       </primitive>
       <OrbitControls enableZoom={false} enablePan={false} />

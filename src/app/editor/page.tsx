@@ -220,10 +220,11 @@ export default function Editor() {
         throw new Error('Could not get 2D context');
       }
 
-      // Create a MediaRecorder with WebM format
-      const stream = tempCanvas.captureStream(60); // 30 FPS
+      // Create a MediaRecorder with optimized settings
+      const stream = tempCanvas.captureStream(60); // Increase to 60 FPS for smoother animation
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9'
+        mimeType: 'video/webm;codecs=vp8',
+        videoBitsPerSecond: 8000000 // 8 Mbps for high quality
       });
 
       const chunks: BlobPart[] = [];
@@ -247,22 +248,26 @@ export default function Editor() {
         setShowDownloadPopup(false);
       };
 
-      // Function to draw the current frame
+      // Function to draw the current frame with error handling
       const drawFrame = () => {
-        // Clear the temporary canvas with the background color
-        if (backgroundColor === 'transparent') {
-          tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-        } else {
-          tempCtx.fillStyle = backgroundColor;
-          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        try {
+          // Clear the temporary canvas with the background color
+          if (backgroundColor === 'transparent') {
+            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+          } else {
+            tempCtx.fillStyle = backgroundColor;
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+          }
+          
+          // Draw the WebGL canvas
+          tempCtx.drawImage(canvasRef.current!, 0, 0);
+        } catch (error) {
+          console.error('Error drawing frame:', error);
         }
-        
-        // Draw the WebGL canvas
-        tempCtx.drawImage(canvasRef.current!, 0, 0);
       };
 
       // Calculate recording duration based on mode
-      let recordingDuration = 5000; // Default 5 seconds
+      let recordingDuration = 5000;
       if (downloadMode === 'duration') {
         recordingDuration = downloadDuration * 1000; // Convert seconds to milliseconds
       } else {
@@ -272,21 +277,39 @@ export default function Editor() {
         recordingDuration = timePerLoop * downloadLoops * 1000; // Convert to milliseconds
       }
 
-      // Start recording
-      mediaRecorder.start(1000); // Collect data every second
+      // Start recording with smaller time slices for more frequent updates
+      mediaRecorder.start(1000 / 60); // Collect data at 60 FPS
       
-      // Set up animation frame loop
+      // Set up animation frame loop with frame timing
       const startTime = Date.now();
+      let lastFrameTime = startTime;
+      const targetFrameInterval = 1000 / 60; // Target 60 FPS
+
       const animate = () => {
-        drawFrame();
-        if (Date.now() - startTime < recordingDuration) {
+        const currentTime = Date.now();
+        const elapsedTime = currentTime - startTime;
+        const frameTime = currentTime - lastFrameTime;
+
+        // Only draw frame if enough time has passed (maintain 60 FPS)
+        if (frameTime >= targetFrameInterval) {
+          drawFrame();
+          lastFrameTime = currentTime;
+        }
+
+        if (elapsedTime < recordingDuration) {
           requestAnimationFrame(animate);
         } else {
           mediaRecorder.stop();
         }
       };
       
-      animate();
+      // Wait for next frame to ensure clean state before starting animation
+      requestAnimationFrame(() => {
+        // Add a small delay to ensure rotation reset is complete
+        setTimeout(() => {
+          animate();
+        }, 50);
+      });
     } catch (error) {
       console.error('Error recording video:', error);
       setIsDownloading(false);
