@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import LogoScene from '../components/LogoScene';
 import { processImage, ProcessedImage } from '../utils/imageProcessor';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -15,7 +15,7 @@ const SIZE_PRESETS = [
   { label: '2K', width: 2048, height: 1080 },
 ];
 
-export default function Editor() {
+function EditorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [processedImage, setProcessedImage] = useState<ProcessedImage | null>(null);
@@ -660,5 +660,13 @@ export default function Editor() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function Editor() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <EditorContent />
+    </Suspense>
   );
 } 
