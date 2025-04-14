@@ -3,10 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import LogoScene from '../components/LogoScene';
 import { processImage, ProcessedImage } from '../utils/imageProcessor';
-import { useSearchParams, useRouter } from 'next/navigation';
-import html2canvas from 'html2canvas';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const SIZE_PRESETS = [
   { label: 'Portrait', width: 1080, height: 1920 },
@@ -15,9 +12,13 @@ const SIZE_PRESETS = [
   { label: '2K', width: 2048, height: 1080 },
 ];
 
+function SearchParamsWrapper({ children }: { children: (searchParams: URLSearchParams) => React.ReactNode }) {
+  const searchParams = useSearchParams();
+  return <>{children(searchParams)}</>;
+}
+
 function EditorContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [processedImage, setProcessedImage] = useState<ProcessedImage | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -666,7 +667,11 @@ function EditorContent() {
 export default function Editor() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <EditorContent />
+      <SearchParamsWrapper>
+        {(searchParams) => (
+          <EditorContent />
+        )}
+      </SearchParamsWrapper>
     </Suspense>
   );
 } 
