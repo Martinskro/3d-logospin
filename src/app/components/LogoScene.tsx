@@ -5,6 +5,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Mesh, TextureLoader, Group, WebGLRenderer, Scene, PerspectiveCamera as ThreePerspectiveCamera } from 'three';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { MiddleShape } from './MiddleShape';
+import * as THREE from 'three';
 
 interface LogoProps {
   imageUrl: string;
@@ -14,35 +15,41 @@ interface LogoProps {
   color?: string;
   mask?: ImageData;
   spinDirection: 'clockwise' | 'counterclockwise';
+  isDownloading?: boolean;
 }
 
-function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection }: LogoProps) {
+function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection, isDownloading }: LogoProps) {
   const groupRef = useRef<Group>(null);
   const [rotationSpeed, setRotationSpeed] = useState(0.01);
-  const texture = useLoader(TextureLoader, imageUrl);
+  const [texture, setTexture] = useState<THREE.Texture | null>(null);
   const [dimensions, setDimensions] = useState({ width: 2, height: 2 });
 
-  // Calculate dimensions based on image aspect ratio
+  // Load texture and calculate dimensions
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => {
-      const aspectRatio = img.width / img.height;
-      let width = 2;
-      let height = 2;
-      
-      if (aspectRatio > 1) {
-        // Image is wider than tall
-        width = 2;
-        height = 2 / aspectRatio;
-      } else {
-        // Image is taller than wide
-        width = 2 * aspectRatio;
-        height = 2;
+    const loader = new TextureLoader();
+    loader.load(
+      imageUrl,
+      (loadedTexture) => {
+        setTexture(loadedTexture);
+        const aspectRatio = loadedTexture.image.width / loadedTexture.image.height;
+        let width = 2;
+        let height = 2;
+        
+        if (aspectRatio > 1) {
+          width = 2;
+          height = 2 / aspectRatio;
+        } else {
+          width = 2 * aspectRatio;
+          height = 2;
+        }
+        
+        setDimensions({ width, height });
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading texture:', error);
       }
-      
-      setDimensions({ width, height });
-    };
-    img.src = imageUrl;
+    );
   }, [imageUrl]);
 
   // Update rotation speed based on speed prop
@@ -57,38 +64,51 @@ function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection }: Log
     }
   }, [scale]);
 
+  // Reset rotation when starting download
+  useEffect(() => {
+    if (isDownloading && groupRef.current) {
+      groupRef.current.rotation.y = 0;
+      setRotationSpeed(speed / 2500);
+    }
+  }, [isDownloading, speed]);
+
   useFrame(() => {
     if (groupRef.current) {
       groupRef.current.rotation.y += spinDirection === 'clockwise' ? rotationSpeed : -rotationSpeed;
     }
   });
 
+  if (!texture) return null;
+
+  // Add a small offset to prevent z-fighting
+  const zOffset = 0.011;
+
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
       {/* Front face */}
-      <mesh position={[0, 0, depth / 2 + 0.01]}>
+      <mesh position={[0, 0, depth / 2 + zOffset]}>
         <planeGeometry args={[dimensions.width, dimensions.height]} />
         <meshBasicMaterial 
           map={texture}
           transparent={true}
           opacity={1}
           side={0}
-          alphaTest={0.5}
-          depthWrite={false}
-          depthTest={false}
+          alphaTest={0.1}
+          depthWrite={true}
+          depthTest={true}
         />
       </mesh>
       {/* Back face */}
-      <mesh position={[0, 0, -depth / 2 - 0.01]}>
+      <mesh position={[0, 0, -depth / 2 - zOffset]}>
         <planeGeometry args={[dimensions.width, dimensions.height]} />
         <meshBasicMaterial 
           map={texture}
           transparent={true}
           opacity={1}
           side={1}
-          alphaTest={0.5}
-          depthWrite={false}
-          depthTest={false}
+          alphaTest={0.1}
+          depthWrite={true}
+          depthTest={true}
         />
       </mesh>
       {/* Middle connection */}
@@ -148,15 +168,6 @@ export default function LogoScene({
     }
   }, [backgroundColor]);
 
-  // Reset rotation when starting a new recording
-  useEffect(() => {
-    if (groupRef.current && glRef.current && sceneRef.current && cameraRef.current) {
-      groupRef.current.rotation.y = 0;
-      // Force a re-render to ensure the rotation is applied
-      glRef.current.render(sceneRef.current, cameraRef.current);
-    }
-  }, [isDownloading]);
-
   return (
     <Canvas 
       camera={{ position: [0, 0, 5], fov: 75 }}
@@ -202,6 +213,7 @@ export default function LogoScene({
           color={color}
           mask={mask}
           spinDirection={spinDirection}
+          isDownloading={isDownloading}
         />
       </primitive>
       <OrbitControls enableZoom={false} enablePan={false} />
