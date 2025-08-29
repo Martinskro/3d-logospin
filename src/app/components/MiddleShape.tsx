@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Shape, Vector2, ExtrudeGeometry } from 'three';
+import { Shape, Vector2, Path } from 'three';
 import { createShapeFromMask } from '../utils/shapeCreator';
 
 interface MiddleShapeProps {
@@ -17,39 +17,47 @@ export function MiddleShape({ mask, color = '#ffffff', depth = 0.5, width = 2, h
     if (mask) {
       createShapeFromMask(mask).then(result => {
         if (result.shapes && result.shapes.length > 0) {
-          // Filter and validate shapes
-          const validShapes = result.shapes
-            .filter(points => {
-              // Ensure we have at least 3 points to form a valid shape
-              if (points.length < 3) return false;
-              
-              // Check if the shape is too small (likely noise)
-              const bounds = points.reduce((acc, p) => ({
-                minX: Math.min(acc.minX, p.x),
-                maxX: Math.max(acc.maxX, p.x),
-                minY: Math.min(acc.minY, p.y),
-                maxY: Math.max(acc.maxY, p.y)
-              }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+          const built: Shape[] = [];
+          for (const sh of result.shapes) {
+            const outer = sh.outer;
+            if (!outer || outer.length < 3) continue;
 
-              const shapeWidth = bounds.maxX - bounds.minX;
-              const shapeHeight = bounds.maxY - bounds.minY;
-              
-              // Filter out shapes that are too small (less than 1% of the image size)
-              return shapeWidth > 0.02 && shapeHeight > 0.02;
-            })
-            .map(points => {
-              const shape = new Shape();
-              // Scale points to match the dimensions and center them
-              const scaledPoints = points.map(p => new Vector2(
-                (p.x * 2 - 1) * (width / 2),
-                (p.y * 2 - 1) * (height / 2)
-              ));
-              shape.setFromPoints(scaledPoints);
-              shape.closePath();
-              return shape;
-            });
+            // Bounds check on outer
+            const bounds = outer.reduce((acc, p) => ({
+              minX: Math.min(acc.minX, p.x),
+              maxX: Math.max(acc.maxX, p.x),
+              minY: Math.min(acc.minY, p.y),
+              maxY: Math.max(acc.maxY, p.y)
+            }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+            const shapeWidth = bounds.maxX - bounds.minX;
+            const shapeHeight = bounds.maxY - bounds.minY;
+            if (shapeWidth <= 0.02 || shapeHeight <= 0.02) continue; // filter noise
 
-          setShapes(validShapes);
+            const shape = new Shape();
+            const outerScaled = outer.map(p => new Vector2(
+              (p.x * 2 - 1) * (width / 2),
+              (p.y * 2 - 1) * (height / 2)
+            ));
+            shape.setFromPoints(outerScaled);
+            shape.closePath();
+
+            if (sh.holes && sh.holes.length) {
+              for (const hole of sh.holes) {
+                if (!hole || hole.length < 3) continue;
+                const holeScaled = hole.map(p => new Vector2(
+                  (p.x * 2 - 1) * (width / 2),
+                  (p.y * 2 - 1) * (height / 2)
+                ));
+                const holePath = new Path();
+                holePath.setFromPoints(holeScaled);
+                holePath.closePath();
+                shape.holes.push(holePath);
+              }
+            }
+
+            built.push(shape);
+          }
+          setShapes(built);
         } else {
           setShapes([]);
         }
@@ -61,11 +69,11 @@ export function MiddleShape({ mask, color = '#ffffff', depth = 0.5, width = 2, h
 
   const extrudeSettings = useMemo(() => ({
     depth: depth,
-    bevelEnabled: true,
-    bevelThickness: 0.01,
-    bevelSize: 0.01,
+    bevelEnabled: false,
+    bevelThickness: 0,
+    bevelSize: 0,
     bevelOffset: 0,
-    bevelSegments: 2,
+    bevelSegments: 0,
     curveSegments: 12
   }), [depth]);
 

@@ -80,8 +80,8 @@ function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection, isDow
 
   if (!texture) return null;
 
-  // Add a small offset to prevent z-fighting
-  const zOffset = 0.011;
+  // Use polygonOffset on materials instead of separating planes in Z
+  const zOffset = 0;
 
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
@@ -96,6 +96,9 @@ function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection, isDow
           alphaTest={0.1}
           depthWrite={true}
           depthTest={true}
+          polygonOffset={true}
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
         />
       </mesh>
       {/* Back face */}
@@ -109,6 +112,9 @@ function Logo({ imageUrl, speed, scale, depth, color, mask, spinDirection, isDow
           alphaTest={0.1}
           depthWrite={true}
           depthTest={true}
+          polygonOffset={true}
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
         />
       </mesh>
       {/* Middle connection */}

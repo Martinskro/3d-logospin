@@ -3,7 +3,7 @@ import { Shape, Vector2 } from 'three';
 let worker: Worker | null = null;
 
 interface WorkerResponse {
-  shapes: { x: number; y: number }[][];
+  shapes: { outer: { x: number; y: number }[]; holes: { x: number; y: number }[][] }[];
 }
 
 export function createShapeFromMask(mask: ImageData): Promise<WorkerResponse> {
