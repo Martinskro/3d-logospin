@@ -327,9 +327,6 @@ function EditorContent() {
     <main className="min-h-screen bg-white">
       <div className="navbar">
         <h2 className="navbar-text" onClick={() => router.push('/')} style={{ cursor: 'pointer' }}>3D ANIMATOR</h2>
-        <div className="navbar-buttons">
-          <button className="nav-btn">Log In</button>
-        </div>
       </div>
 
       <div className="editor-container">

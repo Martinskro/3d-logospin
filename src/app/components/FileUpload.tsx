@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import Image from 'next/image';
+import { CornerDownLeft, CornerDownRight, CornerUpLeft, CornerUpRight } from 'lucide-react';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -87,34 +87,10 @@ export default function FileUpload({ onFileSelect }: FileUploadProps) {
       <div
         className={`overlay ${isDragging ? 'visible' : ''}`}
       >
-        <Image 
-          src="/TL.png" 
-          alt="Top Left Corner" 
-          width={90} 
-          height={90} 
-          className="overlay-corner top-left" 
-        />
-        <Image 
-          src="/TR.png" 
-          alt="Top Right Corner" 
-          width={90} 
-          height={90} 
-          className="overlay-corner top-right" 
-        />
-        <Image 
-          src="/BL.png" 
-          alt="Bottom Left Corner" 
-          width={90} 
-          height={90} 
-          className="overlay-corner bottom-left" 
-        />
-        <Image 
-          src="/BR.png" 
-          alt="Bottom Right Corner" 
-          width={90} 
-          height={90} 
-          className="overlay-corner bottom-right" 
-        />
+        <CornerUpLeft size={90} className="overlay-corner top-left" />
+        <CornerUpRight size={90} className="overlay-corner top-right" />
+        <CornerDownLeft size={90} className="overlay-corner bottom-left" />
+        <CornerDownRight size={90} className="overlay-corner bottom-right" />
         <div className="overlay-text">Drop PNG file anywhere</div>
       </div>
       <div

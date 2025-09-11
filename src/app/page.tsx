@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import FileUpload from './components/FileUpload';
 import { useRouter } from 'next/navigation';
+import { Upload, Play, Download, CornerDownLeft, CornerDownRight, CornerUpLeft, CornerUpRight, ImageIcon, RotateCcw } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -76,9 +77,6 @@ export default function Home() {
     <main>
       <div className="navbar">
         <h2 className="navbar-text" onClick={() => router.push('/')} style={{ cursor: 'pointer' }}>3D ANIMATOR</h2>
-        <div className="navbar-buttons">
-          <button className="nav-btn">Log In</button>
-        </div>
       </div>
       
       <section className="section section1">
@@ -112,16 +110,14 @@ export default function Home() {
 
       <section className="section section2">
         <div className="content-container">
-          <h2 className="section-title">How to animate your picture:</h2>
+          <h2 className="section-title">The process:</h2>
           <div className="box-container">
             <div className="box">
               <div className="box-content">
-                <Image 
-                  src="/upload.png" 
-                  alt="Upload step" 
-                  width={40} 
-                  height={40} 
+                <Upload 
+                  size={40} 
                   className="box-image" 
+                  color="#3b82f6"
                 />
                 <div className="text-wrapper">
                   <h3 className="box-header">1. Upload.</h3>
@@ -131,12 +127,10 @@ export default function Home() {
             </div>
             <div className="box">
               <div className="box-content">
-                <Image 
-                  src="/animate.png" 
-                  alt="Animate step" 
-                  width={40} 
-                  height={40} 
+                <Play 
+                  size={40} 
                   className="box-image" 
+                  color="#3b82f6"
                 />
                 <div className="text-wrapper">
                   <h3 className="box-header">2. Animation.</h3>
@@ -146,12 +140,10 @@ export default function Home() {
             </div>
             <div className="box">
               <div className="box-content">
-                <Image 
-                  src="/edit.png" 
-                  alt="Edit step" 
-                  width={40} 
-                  height={40} 
+                <Download 
+                  size={40} 
                   className="box-image" 
+                  color="#3b82f6"
                 />
                 <div className="text-wrapper">
                   <h3 className="box-header">3. Download.</h3>
@@ -169,25 +161,17 @@ export default function Home() {
             <h2 className="section-header">Convert Your Photo to 3D Animation for Free</h2>
             <p className="section-description">3D animation adds depth and dimension to your visuals, making them more engaging and lifelike. Unlike static photos, 3D animations can be scaled, rotated, and manipulated in various ways without losing quality. Transform your photos into 3D animations for use in presentations, videos, advertisements, and more to create captivating and dynamic content.</p>
           </div>
-          <Image 
-            src="/pending.png" 
-            alt="3D Animation Preview" 
-            width={500} 
-            height={400} 
-            className="section-image"
-          />
+          <div className="section-image-icon">
+            <ImageIcon size={200} className="text-blue-500" />
+          </div>
         </div>
       </section>
 
       <section className="section section4">
         <div className="content-container">
-          <Image 
-            src="/switch.png" 
-            alt="Switch Preview" 
-            width={500} 
-            height={400} 
-            className="section-image"
-          />
+          <div className="section-image-icon">
+            <RotateCcw size={200} className="text-green-500" />
+          </div>
           <div className="text-wrapper">
             <h2 className="section-header">An Easy-to-Use Photo to 3D Animation Converter</h2>
             <p className="section-description">The 3D animation converter allows you to transform your photos into immersive animations effortlessly. Simply upload a photo from your device, and watch it come to life as a 3D animation in seconds. Download your new 3D creation instantly and use it in your presentations, social media, or upcoming projects to wow your audience.</p>
@@ -198,10 +182,10 @@ export default function Home() {
       <FileUpload onFileSelect={handleFileSelect} />
 
       <div className={`overlay ${showOverlay ? 'block' : 'hidden'}`}>
-        <Image src="/TL.png" className="overlay-corner top-left" alt="Top Left" width={90} height={90} />
-        <Image src="/TR.png" className="overlay-corner top-right" alt="Top Right" width={90} height={90} />
-        <Image src="/BL.png" className="overlay-corner bottom-left" alt="Bottom Left" width={90} height={90} />
-        <Image src="/BR.png" className="overlay-corner bottom-right" alt="Bottom Right" width={90} height={90} />
+        <CornerUpLeft size={90} className="overlay-corner top-left" />
+        <CornerUpRight size={90} className="overlay-corner top-right" />
+        <CornerDownLeft size={90} className="overlay-corner bottom-left" />
+        <CornerDownRight size={90} className="overlay-corner bottom-right" />
         <div className="overlay-text">Drop image anywhere</div>
       </div>
 
