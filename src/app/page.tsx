@@ -84,7 +84,7 @@ export default function Home() {
       <section className="section section1">
         <div className="text-container">
           <h1>Free online PNG to 3D-Animation</h1>
-          <p>The free online PNG to animation tool from MelonMedia lets you upload your PNG image and convert it to a spinning 3D-animation in seconds.</p>
+          <p>The free online PNG to animation tool created by Martinskro lets you upload your PNG image and convert it to a spinning 3D-animation in seconds.</p>
           
           <div className="big-container">
             <div className="button-textbox-container">
@@ -95,7 +95,7 @@ export default function Home() {
                 <p>No payment required</p>
               </div>
             </div>
-            <p className="additional-text">or drop a file, paste an image or URL.</p>
+            <p className="additional-text">or drop a file!</p>
           </div>
         </div>
         <video
@@ -125,7 +125,7 @@ export default function Home() {
                 />
                 <div className="text-wrapper">
                   <h3 className="box-header">1. Upload.</h3>
-                  <p className="box-description">Choose your prefered image from your photo library that is less than 2GB in size.</p>
+                  <p className="box-description">Choose your prefered image from your photo library.</p>
                 </div>
               </div>
             </div>
@@ -140,7 +140,7 @@ export default function Home() {
                 />
                 <div className="text-wrapper">
                   <h3 className="box-header">2. Animation.</h3>
-                  <p className="box-description">Our program will cut out your logo and process it, then make it 3D and animate it!</p>
+                  <p className="box-description">Our program will make it 3D and animate it, you can then change properties like speed, scale, and more!</p>
                 </div>
               </div>
             </div>
@@ -154,8 +154,8 @@ export default function Home() {
                   className="box-image" 
                 />
                 <div className="text-wrapper">
-                  <h3 className="box-header">3. Continue editing.</h3>
-                  <p className="box-description">Your animation is done, but you can change properties like edge material and finish, speed, etc.</p>
+                  <h3 className="box-header">3. Download.</h3>
+                  <p className="box-description">Your animation is done, you can then download it and use it in your projects!</p>
                 </div>
               </div>
             </div>
